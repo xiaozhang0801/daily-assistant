@@ -71,13 +71,13 @@ async function loadToday(): Promise<void> {
 }
 
 async function pauseCapture(): Promise<void> {
-  const result = await window.dailyAssistant?.dashboard.pauseCapture();
-  state.value.recording = result?.recording ?? false;
+  await window.dailyAssistant?.dashboard.pauseCapture();
+  await loadToday();
 }
 
 async function resumeCapture(): Promise<void> {
-  const result = await window.dailyAssistant?.dashboard.resumeCapture();
-  state.value.recording = result?.recording ?? true;
+  await window.dailyAssistant?.dashboard.resumeCapture();
+  await loadToday();
 }
 
 async function generateReport(): Promise<void> {

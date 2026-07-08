@@ -1,11 +1,17 @@
 export interface CaptureSchedulerOptions {
-  intervalMs: number;
+  intervalMs: number | (() => number);
   run: () => void | Promise<void>;
 }
 
 export function createCaptureScheduler(options: CaptureSchedulerOptions) {
   let timer: ReturnType<typeof setInterval> | null = null;
+  let currentIntervalMs: number | null = null;
   let paused = false;
+
+  function resolveIntervalMs(): number {
+    const intervalMs = typeof options.intervalMs === "function" ? options.intervalMs() : options.intervalMs;
+    return Math.max(1_000, intervalMs);
+  }
 
   function tick() {
     if (!paused) {
@@ -15,8 +21,13 @@ export function createCaptureScheduler(options: CaptureSchedulerOptions) {
 
   return {
     start() {
-      if (timer) return;
-      timer = setInterval(tick, options.intervalMs);
+      const nextIntervalMs = resolveIntervalMs();
+      if (timer && currentIntervalMs === nextIntervalMs) return;
+      if (timer) {
+        clearInterval(timer);
+      }
+      currentIntervalMs = nextIntervalMs;
+      timer = setInterval(tick, nextIntervalMs);
     },
     pause() {
       paused = true;
@@ -29,6 +40,7 @@ export function createCaptureScheduler(options: CaptureSchedulerOptions) {
         clearInterval(timer);
         timer = null;
       }
+      currentIntervalMs = null;
     },
     getState() {
       return {

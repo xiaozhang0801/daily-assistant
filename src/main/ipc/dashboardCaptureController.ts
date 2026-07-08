@@ -1,5 +1,5 @@
-import type { CaptureRecord } from "../../shared/types";
-import { createDashboardState } from "./dashboardState";
+import type { CaptureRecord, WorkEvent } from "../../shared/types";
+import { createDashboardState, type TodayDashboardState } from "./dashboardState";
 
 interface CaptureSchedulerLike {
   start(): void;
@@ -13,23 +13,40 @@ interface DashboardCaptureControllerOptions {
   scheduler: CaptureSchedulerLike;
   captureNow: () => Promise<CaptureRecord>;
   saveCapture?: (record: CaptureRecord) => void;
+  analyzeCapture?: (record: CaptureRecord) => Promise<WorkEvent | null>;
+  saveWorkEvent?: (event: WorkEvent) => void;
+  getTodaySnapshot?: (state: TodayDashboardState) => TodayDashboardState;
 }
 
 export function createDashboardCaptureController(options: DashboardCaptureControllerOptions) {
   const dashboardState = createDashboardState();
+  let captureInFlight = false;
 
   async function captureOnce(): Promise<void> {
+    if (captureInFlight) return;
+    captureInFlight = true;
+
     try {
       const record = await options.captureNow();
       options.saveCapture?.(record);
       dashboardState.recordCapture();
+      const event = await options.analyzeCapture?.(record);
+      if (event) {
+        options.saveWorkEvent?.(event);
+        dashboardState.recordEvent(event);
+      }
     } catch {
       // Keep recording active. A later scheduler tick can retry capture.
+    } finally {
+      captureInFlight = false;
     }
   }
 
   return {
-    getToday: () => dashboardState.getToday(),
+    getToday: () => {
+      const state = dashboardState.getToday();
+      return options.getTodaySnapshot?.(state) ?? state;
+    },
     pauseCapture: () => {
       options.scheduler.pause();
       return dashboardState.pauseCapture();

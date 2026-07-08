@@ -52,6 +52,13 @@ export function createDashboardState(initial?: Partial<TodayDashboardState>) {
         capturedDurationMinutes: state.capturedDurationMinutes + 1
       };
     },
+    recordEvent(event: WorkEvent) {
+      state = {
+        ...state,
+        analyzedEventCount: state.analyzedEventCount + 1,
+        events: [...state.events, event]
+      };
+    },
     setReportDraft(content: string) {
       state = { ...state, reportDraft: content };
     }

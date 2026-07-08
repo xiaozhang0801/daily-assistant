@@ -1,10 +1,16 @@
+import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import { desktopCapturer, ipcMain } from "electron";
+import type { CaptureRecord, WorkEvent, WorkEventDraft } from "../../shared/types";
 import { dashboardChannels } from "../../shared/types/ipc";
+import { createProviderRegistry } from "../services/ai/providerRegistry";
+import { resolveScreenshotPrompt } from "../services/ai/prompts";
 import { captureScreenshot } from "../services/capture/screenshotCapture";
 import { createCaptureScheduler } from "../services/capture/captureScheduler";
 import type { AppRepositories } from "../services/storage/repositories";
 import { createDashboardCaptureController } from "./dashboardCaptureController";
 import { createDashboardState } from "./dashboardState";
+import { createDashboardSummaryProvider } from "./dashboardSummary";
 
 interface DashboardController {
   getToday(): unknown;
@@ -25,6 +31,63 @@ function captureIntervalMs(repositories?: AppRepositories): number {
   return safeMinutes * 60_000;
 }
 
+function clampConfidence(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(1, value));
+}
+
+function normalizeWorkEventDraft(draft: WorkEventDraft): WorkEventDraft {
+  return {
+    title: draft.title.trim() || "未命名活动",
+    summary: draft.summary.trim() || "AI 未返回摘要。",
+    category: draft.category.trim() || "未分类",
+    confidence: clampConfidence(draft.confidence)
+  };
+}
+
+function toWorkEvent(record: CaptureRecord, draft: WorkEventDraft): WorkEvent {
+  const normalized = normalizeWorkEventDraft(draft);
+
+  return {
+    id: randomUUID(),
+    captureId: record.id,
+    startedAt: record.capturedAt,
+    endedAt: record.capturedAt,
+    title: normalized.title,
+    summary: normalized.summary,
+    category: normalized.category,
+    confidence: normalized.confidence,
+    source: "ai"
+  };
+}
+
+function createScreenshotAnalyzer(repositories: AppRepositories) {
+  const registry = createProviderRegistry();
+
+  return async (record: CaptureRecord): Promise<WorkEvent | null> => {
+    if (repositories.settings.get("capture.uploadToAIEnabled") !== "true") {
+      return null;
+    }
+
+    const profile = repositories.aiProviders.listEnabled()[0];
+    const apiKey = repositories.settings.get("ai.apiKey");
+    if (!profile || !apiKey || !profile.modelName) {
+      return null;
+    }
+
+    const imageBase64 = (await readFile(record.imagePath)).toString("base64");
+    const prompt = resolveScreenshotPrompt(repositories.settings.get("prompt.screenshot"));
+    const provider = registry.create(profile, apiKey);
+    const draft = await provider.analyzeScreenshot({
+      imageBase64,
+      mimeType: "image/png",
+      prompt
+    });
+
+    return toWorkEvent(record, draft);
+  };
+}
+
 async function captureDesktopPng(): Promise<Buffer> {
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
@@ -43,9 +106,12 @@ function createDefaultDashboardController(options: DashboardIpcOptions): Dashboa
     return createDashboardState();
   }
 
+  const repositories = options.repositories;
+  const screenshotsDirectory = options.screenshotsDirectory;
+  const summaryProvider = createDashboardSummaryProvider({ repositories });
   let controller: ReturnType<typeof createDashboardCaptureController>;
   const scheduler = createCaptureScheduler({
-    intervalMs: captureIntervalMs(options.repositories),
+    intervalMs: () => captureIntervalMs(repositories),
     run: () => {
       void controller.resumeCapture();
     }
@@ -55,10 +121,13 @@ function createDefaultDashboardController(options: DashboardIpcOptions): Dashboa
     scheduler,
     captureNow: () =>
       captureScreenshot({
-        storageDirectory: options.screenshotsDirectory ?? "",
+        storageDirectory: screenshotsDirectory,
         screenshotPng: captureDesktopPng
       }),
-    saveCapture: (record) => options.repositories?.captures.save(record)
+    saveCapture: (record) => repositories.captures.save(record),
+    analyzeCapture: createScreenshotAnalyzer(repositories),
+    saveWorkEvent: (event) => repositories.workEvents.save(event),
+    getTodaySnapshot: (state) => summaryProvider.getToday(state)
   });
 
   return controller;

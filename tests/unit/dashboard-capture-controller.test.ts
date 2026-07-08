@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CaptureRecord } from "../../src/shared/types";
+import type { CaptureRecord, WorkEvent } from "../../src/shared/types";
 import { createDashboardCaptureController } from "../../src/main/ipc/dashboardCaptureController";
 
 function createCaptureRecord(id = "capture-1"): CaptureRecord {
@@ -21,6 +21,20 @@ function createSchedulerStub() {
     resume: vi.fn(),
     stop: vi.fn(),
     getState: vi.fn(() => ({ running: true, paused: false }))
+  };
+}
+
+function createWorkEvent(captureId = "capture-1"): WorkEvent {
+  return {
+    id: "event-1",
+    captureId,
+    startedAt: "2026-07-08T09:00:00.000Z",
+    endedAt: "2026-07-08T09:00:00.000Z",
+    title: "实现日报助手",
+    summary: "整理日报助手的截图采集和状态展示。",
+    category: "开发",
+    confidence: 0.9,
+    source: "ai"
   };
 }
 
@@ -57,5 +71,25 @@ describe("dashboard capture controller", () => {
 
     expect(scheduler.pause).toHaveBeenCalledTimes(1);
     expect(controller.getToday().recording).toBe(false);
+  });
+
+  it("analyzes a captured screenshot and saves the work event", async () => {
+    const scheduler = createSchedulerStub();
+    const captureRecord = createCaptureRecord();
+    const workEvent = createWorkEvent(captureRecord.id);
+    const analyzeCapture = vi.fn().mockResolvedValue(workEvent);
+    const saveWorkEvent = vi.fn();
+    const controller = createDashboardCaptureController({
+      scheduler,
+      captureNow: vi.fn().mockResolvedValue(captureRecord),
+      saveCapture: vi.fn(),
+      analyzeCapture,
+      saveWorkEvent
+    });
+
+    await controller.resumeCapture();
+
+    expect(analyzeCapture).toHaveBeenCalledWith(captureRecord);
+    expect(saveWorkEvent).toHaveBeenCalledWith(workEvent);
   });
 });
