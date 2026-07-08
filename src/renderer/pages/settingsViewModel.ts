@@ -26,6 +26,11 @@ export interface NormalizedAIProviderSettings {
   captureIntervalMinutes: number;
 }
 
+export interface ConnectionStatusResult {
+  ok: boolean;
+  message: string;
+}
+
 function parseCustomHeaders(text: string, errors: string[]): Record<string, string> {
   const trimmed = text.trim();
   if (!trimmed) return {};
@@ -90,4 +95,8 @@ export function normalizeAIProviderSettings(input: AIProviderSettingsInput): {
     },
     errors
   };
+}
+
+export function toConnectionStatusMessage(result: ConnectionStatusResult | undefined): string {
+  return result?.message || "没有连接到 Electron 主进程，请在桌面应用窗口中测试连接";
 }

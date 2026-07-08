@@ -2,7 +2,7 @@
 import { onMounted, ref } from "vue";
 import { AlertCircle, Bot, KeyRound, Save, SlidersHorizontal, TestTube } from "lucide-vue-next";
 import { defaultDailyReportPrompt, defaultScreenshotPrompt } from "../../main/services/ai/prompts";
-import { normalizeAIProviderSettings } from "./settingsViewModel";
+import { normalizeAIProviderSettings, toConnectionStatusMessage } from "./settingsViewModel";
 
 interface SettingsState {
   providerType: "minimax" | "openai_compatible";
@@ -56,10 +56,18 @@ async function testConnection(): Promise<void> {
   connectionMessage.value = "";
   if (normalized.errors.length > 0) return;
 
+  const bridge = window.dailyAssistant?.settings;
+  if (!bridge) {
+    connectionMessage.value = toConnectionStatusMessage(undefined);
+    return;
+  }
+
   testText.value = "测试中";
   try {
-    const result = await window.dailyAssistant?.settings.testAIProvider(normalized.value);
-    connectionMessage.value = result?.message ?? "未返回连接状态";
+    const result = await bridge.testAIProvider(normalized.value);
+    connectionMessage.value = toConnectionStatusMessage(result);
+  } catch (error) {
+    connectionMessage.value = error instanceof Error ? error.message : "测试连接失败";
   } finally {
     testText.value = "测试连接";
   }
