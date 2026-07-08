@@ -1,4 +1,4 @@
-import type { AIProviderProfile, WorkEventDraft } from "../../../shared/types";
+import type { AIProviderProfile, ProviderStatus, WorkEventDraft } from "../../../shared/types";
 import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "./provider";
 
 type FetchLike = typeof fetch;
@@ -9,6 +9,13 @@ interface ChatCompletionResponse {
       content: string;
     };
   }>;
+}
+
+interface ChatCompletionRequest {
+  model: string;
+  messages: unknown[];
+  max_tokens?: number;
+  stream?: boolean;
 }
 
 function parseWorkEvent(content: string): WorkEventDraft {
@@ -26,6 +33,22 @@ function chatEndpoint(baseUrl: string): string {
   return `${baseUrl.replace(/\/$/, "")}/chat/completions`;
 }
 
+function connectionStatusFromHttpStatus(status: number): ProviderStatus {
+  if (status === 401 || status === 403) {
+    return { ok: false, message: "API Key 无效或无权限。" };
+  }
+
+  if (status === 404) {
+    return { ok: false, message: "接口地址或模型不存在。" };
+  }
+
+  if (status === 429) {
+    return { ok: false, message: "请求过于频繁或额度受限。" };
+  }
+
+  return { ok: false, message: `连接失败：接口返回 HTTP ${status}。` };
+}
+
 export function createOpenAICompatibleProvider(
   profile: AIProviderProfile,
   apiKey: string,
@@ -37,18 +60,22 @@ export function createOpenAICompatibleProvider(
 
   const endpoint = chatEndpoint(profile.baseUrl);
 
-  async function post(messages: unknown[]): Promise<ChatCompletionResponse> {
-    const response = await fetchImpl(endpoint, {
+  async function requestChat(body: ChatCompletionRequest): Promise<Response> {
+    return fetchImpl(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
         ...profile.customHeaders
       },
-      body: JSON.stringify({
-        model: profile.modelName,
-        messages
-      })
+      body: JSON.stringify(body)
+    });
+  }
+
+  async function post(messages: unknown[]): Promise<ChatCompletionResponse> {
+    const response = await requestChat({
+      model: profile.modelName,
+      messages
     });
 
     if (!response.ok) {
@@ -89,7 +116,22 @@ export function createOpenAICompatibleProvider(
       return payload.choices[0].message.content;
     },
     async checkConnection() {
-      return { ok: true, message: "Provider profile is configured." };
+      try {
+        const response = await requestChat({
+          model: profile.modelName,
+          messages: [{ role: "user", content: "ping" }],
+          max_tokens: 1,
+          stream: false
+        });
+
+        if (!response.ok) {
+          return connectionStatusFromHttpStatus(response.status);
+        }
+
+        return { ok: true, message: "连接成功。" };
+      } catch {
+        return { ok: false, message: "连接失败：网络不可用或接口无法访问。" };
+      }
     }
   };
 }

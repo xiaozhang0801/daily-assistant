@@ -1,6 +1,8 @@
 import { ipcMain } from "electron";
 import { settingsChannels } from "../../shared/types/ipc";
 import type { AIProviderProfile, AIProviderType } from "../../shared/types";
+import { createMiniMaxProvider } from "../services/ai/minimaxProvider";
+import { createOpenAICompatibleProvider } from "../services/ai/openaiCompatibleProvider";
 import { defaultDailyReportPrompt, defaultScreenshotPrompt } from "../services/ai/prompts";
 import type { AppRepositories } from "../services/storage/repositories";
 
@@ -162,6 +164,16 @@ function validateConnectionSettings(settings: AISettingsPayload): string | null 
   return null;
 }
 
+async function testAIConnection(settings: AISettingsPayload): Promise<{ ok: boolean; message: string }> {
+  const profile = toProviderProfile(settings);
+  const provider =
+    settings.providerType === "minimax"
+      ? createMiniMaxProvider(profile, settings.apiKey)
+      : createOpenAICompatibleProvider(profile, settings.apiKey);
+
+  return provider.checkConnection();
+}
+
 export function registerSettingsIpc(repositories?: AppRepositories): void {
   ipcMain.handle(settingsChannels.get, async () => readSettings(repositories));
 
@@ -178,6 +190,6 @@ export function registerSettingsIpc(repositories?: AppRepositories): void {
       return { ok: false, message: validationMessage };
     }
 
-    return { ok: true, message: "配置格式有效。" };
+    return testAIConnection(normalized);
   });
 }

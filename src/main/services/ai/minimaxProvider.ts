@@ -2,6 +2,8 @@ import type { AIProviderProfile } from "../../../shared/types";
 import type { AIProvider } from "./provider";
 import { createOpenAICompatibleProvider } from "./openaiCompatibleProvider";
 
+export const minimaxDefaultBaseUrl = "https://api.minimaxi.com/v1";
+
 export function createMiniMaxProvider(
   profile: AIProviderProfile,
   apiKey: string,
@@ -9,7 +11,8 @@ export function createMiniMaxProvider(
 ): AIProvider {
   const resolvedProfile: AIProviderProfile = {
     ...profile,
-    type: "minimax"
+    type: "minimax",
+    baseUrl: profile.baseUrl || minimaxDefaultBaseUrl
   };
 
   return createOpenAICompatibleProvider(resolvedProfile, apiKey, fetchImpl);
