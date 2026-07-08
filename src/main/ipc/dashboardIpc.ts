@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { readFile, unlink } from "node:fs/promises";
 import { desktopCapturer, ipcMain } from "electron";
 import type { CaptureRecord, WorkEvent, WorkEventDraft } from "../../shared/types";
 import { dashboardChannels } from "../../shared/types/ipc";
@@ -88,6 +88,17 @@ function createScreenshotAnalyzer(repositories: AppRepositories) {
   };
 }
 
+async function deleteScreenshotFile(record: CaptureRecord): Promise<void> {
+  try {
+    await unlink(record.imagePath);
+  } catch (error) {
+    const code = error instanceof Error && "code" in error ? error.code : null;
+    if (code !== "ENOENT") {
+      throw error;
+    }
+  }
+}
+
 async function captureDesktopPng(): Promise<Buffer> {
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
@@ -127,6 +138,7 @@ function createDefaultDashboardController(options: DashboardIpcOptions): Dashboa
     saveCapture: (record) => repositories.captures.save(record),
     analyzeCapture: createScreenshotAnalyzer(repositories),
     saveWorkEvent: (event) => repositories.workEvents.save(event),
+    deleteCapture: deleteScreenshotFile,
     getTodaySnapshot: (state) => summaryProvider.getToday(state)
   });
 

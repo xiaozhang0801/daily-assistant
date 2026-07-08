@@ -14,7 +14,8 @@ interface DashboardCaptureControllerOptions {
   captureNow: () => Promise<CaptureRecord>;
   saveCapture?: (record: CaptureRecord) => void;
   analyzeCapture?: (record: CaptureRecord) => Promise<WorkEvent | null>;
-  saveWorkEvent?: (event: WorkEvent) => void;
+  saveWorkEvent?: (event: WorkEvent) => void | Promise<void>;
+  deleteCapture?: (record: CaptureRecord) => void | Promise<void>;
   getTodaySnapshot?: (state: TodayDashboardState) => TodayDashboardState;
 }
 
@@ -32,8 +33,9 @@ export function createDashboardCaptureController(options: DashboardCaptureContro
       dashboardState.recordCapture();
       const event = await options.analyzeCapture?.(record);
       if (event) {
-        options.saveWorkEvent?.(event);
+        await options.saveWorkEvent?.(event);
         dashboardState.recordEvent(event);
+        await options.deleteCapture?.(record);
       }
     } catch {
       // Keep recording active. A later scheduler tick can retry capture.

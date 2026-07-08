@@ -92,4 +92,41 @@ describe("dashboard capture controller", () => {
     expect(analyzeCapture).toHaveBeenCalledWith(captureRecord);
     expect(saveWorkEvent).toHaveBeenCalledWith(workEvent);
   });
+
+  it("deletes the screenshot after the analyzed event is saved", async () => {
+    const scheduler = createSchedulerStub();
+    const captureRecord = createCaptureRecord();
+    const workEvent = createWorkEvent(captureRecord.id);
+    const deleteCapture = vi.fn();
+    const controller = createDashboardCaptureController({
+      scheduler,
+      captureNow: vi.fn().mockResolvedValue(captureRecord),
+      saveCapture: vi.fn(),
+      analyzeCapture: vi.fn().mockResolvedValue(workEvent),
+      saveWorkEvent: vi.fn(),
+      deleteCapture
+    });
+
+    await controller.resumeCapture();
+
+    expect(deleteCapture).toHaveBeenCalledWith(captureRecord);
+  });
+
+  it("keeps the screenshot when no analyzed event is produced", async () => {
+    const scheduler = createSchedulerStub();
+    const captureRecord = createCaptureRecord();
+    const deleteCapture = vi.fn();
+    const controller = createDashboardCaptureController({
+      scheduler,
+      captureNow: vi.fn().mockResolvedValue(captureRecord),
+      saveCapture: vi.fn(),
+      analyzeCapture: vi.fn().mockResolvedValue(null),
+      saveWorkEvent: vi.fn(),
+      deleteCapture
+    });
+
+    await controller.resumeCapture();
+
+    expect(deleteCapture).not.toHaveBeenCalled();
+  });
 });
