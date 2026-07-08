@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppRepositories } from "../../src/main/services/storage/repositories";
 import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "../../src/main/services/ai/provider";
 import type { AIProviderProfile, WorkEvent, WorkEventDraft } from "../../src/shared/types";
-import { generateDashboardReport } from "../../src/main/ipc/dashboardReport";
+import { generateDashboardReport, saveDashboardReport } from "../../src/main/ipc/dashboardReport";
 
 const workEvent: WorkEvent = {
   id: "event-1",
@@ -74,7 +74,7 @@ function createProviderStub(content: string): AIProvider {
 }
 
 describe("dashboard report generation", () => {
-  it("builds and saves a report from today's work events when AI is unavailable", async () => {
+  it("builds a draft from today's work events without saving it", async () => {
     const repositories = createRepositoryStub();
 
     const result = await generateDashboardReport({
@@ -84,16 +84,7 @@ describe("dashboard report generation", () => {
 
     expect(result.content).toContain("Implemented realtime dashboard refresh");
     expect(result.content).toContain("Connected today's workspace");
-    expect(repositories.reports.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "daily-2026-07-08",
-        date: "2026-07-08",
-        type: "daily",
-        content: result.content,
-        providerId: "local-fallback",
-        modelName: "fallback"
-      })
-    );
+    expect(repositories.reports.save).not.toHaveBeenCalled();
   });
 
   it("falls back to an event-based report when AI returns only a completion status", async () => {
@@ -117,11 +108,42 @@ describe("dashboard report generation", () => {
 
     expect(result.content).toContain("Implemented realtime dashboard refresh");
     expect(result.content).not.toBe("已生成");
-    expect(repositories.reports.save).toHaveBeenCalledWith(
-      expect.objectContaining({
-        providerId: "local-fallback",
-        modelName: "fallback"
-      })
-    );
+    expect(repositories.reports.save).not.toHaveBeenCalled();
+  });
+
+  it("saves the current draft as today's report and preserves existing report metadata when overwriting", () => {
+    const repositories = createRepositoryStub();
+    vi.mocked(repositories.reports.getByDate).mockReturnValue({
+      id: "old-report",
+      date: "2026-07-08",
+      type: "daily",
+      content: "旧日报",
+      generatedAt: "2026-07-08T09:00:00.000Z",
+      updatedAt: "2026-07-08T09:00:00.000Z",
+      providerId: "primary",
+      modelName: "MiniMax-M3"
+    });
+
+    const result = saveDashboardReport({
+      repositories,
+      content: "# 今日日报\n\n- 新保存的日报。",
+      now: () => new Date("2026-07-08T18:00:00.000Z")
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      content: "# 今日日报\n\n- 新保存的日报。",
+      date: "2026-07-08"
+    });
+    expect(repositories.reports.save).toHaveBeenCalledWith({
+      id: "daily-2026-07-08",
+      date: "2026-07-08",
+      type: "daily",
+      content: "# 今日日报\n\n- 新保存的日报。",
+      generatedAt: "2026-07-08T09:00:00.000Z",
+      updatedAt: "2026-07-08T18:00:00.000Z",
+      providerId: "primary",
+      modelName: "MiniMax-M3"
+    });
   });
 });

@@ -11,10 +11,13 @@ declare global {
           providerStatus: string;
           events: import("../../shared/types").WorkEvent[];
           reportDraft: string;
+          reportSaved: boolean;
         }>;
         pauseCapture: () => Promise<{ ok: boolean; recording: boolean }>;
         resumeCapture: () => Promise<{ ok: boolean; recording: boolean }>;
         generateReport: () => Promise<{ content: string }>;
+        saveReport: (content: string) => Promise<{ ok: true; content: string; date: string }>;
+        getHistory: () => Promise<import("../../shared/types").DailyHistoryDay[]>;
       };
       settings: {
         get: () => Promise<unknown>;

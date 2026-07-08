@@ -21,6 +21,7 @@ describe("reports view model", () => {
     const view = buildTodayReportView({
       date: "2026-07-08",
       reportDraft: "# 今日日报\n\n- 已保存内容。",
+      reportSaved: true,
       events: [event("one"), event("two")]
     });
 
@@ -29,7 +30,7 @@ describe("reports view model", () => {
       {
         id: "today",
         date: "2026-07-08",
-        status: "已生成",
+        status: "已保存",
         count: 2
       }
     ]);
@@ -39,6 +40,7 @@ describe("reports view model", () => {
     const view = buildTodayReportView({
       date: "2026-07-08",
       reportDraft: "",
+      reportSaved: false,
       events: []
     });
 
@@ -46,6 +48,21 @@ describe("reports view model", () => {
     expect(view.reports[0]).toMatchObject({
       status: "草稿",
       count: 0
+    });
+  });
+
+  it("keeps generated but unsaved content as a draft row", () => {
+    const view = buildTodayReportView({
+      date: "2026-07-08",
+      reportDraft: "# 今日日报\n\n- 刚生成，还未保存。",
+      reportSaved: false,
+      events: [event("one")]
+    });
+
+    expect(view.currentReport).toContain("刚生成");
+    expect(view.reports[0]).toMatchObject({
+      status: "草稿",
+      count: 1
     });
   });
 });

@@ -7,6 +7,7 @@ import type {
   DailyReport,
   PromptPurpose,
   PromptTemplate,
+  RecordingSession,
   ReportType,
   WorkEvent,
   WorkEventSource
@@ -38,6 +39,12 @@ interface WorkEventRow {
   category: string;
   confidence: number;
   source: WorkEventSource;
+}
+
+interface RecordingSessionRow {
+  id: string;
+  startedAt: string;
+  endedAt: string | null;
 }
 
 interface DailyReportRow {
@@ -179,6 +186,34 @@ export function createRepositories(db: AppDatabase) {
           FROM captures
           WHERE captured_at BETWEEN @start AND @end
           ORDER BY captured_at ASC
+        `).all(dateRange(date));
+      }
+    },
+    recordingSessions: {
+      save(session: RecordingSession): void {
+        db.prepare<RecordingSession>(`
+          INSERT OR REPLACE INTO recording_sessions
+          (id, started_at, ended_at)
+          VALUES (@id, @startedAt, @endedAt)
+        `).run(session);
+      },
+      end(id: string, endedAt: string): void {
+        db.prepare<{ id: string; endedAt: string }>(`
+          UPDATE recording_sessions
+          SET ended_at = @endedAt
+          WHERE id = @id
+        `).run({ id, endedAt });
+      },
+      listByDate(date: string): RecordingSession[] {
+        return db.prepare<DateRangeParams, RecordingSessionRow>(`
+          SELECT
+            id,
+            started_at AS startedAt,
+            ended_at AS endedAt
+          FROM recording_sessions
+          WHERE started_at <= @end
+            AND COALESCE(ended_at, @end) >= @start
+          ORDER BY started_at ASC
         `).all(dateRange(date));
       }
     },

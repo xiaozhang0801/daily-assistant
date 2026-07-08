@@ -28,6 +28,13 @@ describe("storage repositories", () => {
       skipReason: null
     });
 
+    repos.recordingSessions.save({
+      id: "session-1",
+      startedAt: "2026-07-07T09:00:00.000Z",
+      endedAt: null
+    });
+    repos.recordingSessions.end("session-1", "2026-07-07T09:30:00.000Z");
+
     repos.workEvents.save({
       id: "event-1",
       captureId: "capture-1",
@@ -52,6 +59,13 @@ describe("storage repositories", () => {
     });
 
     expect(repos.captures.listByDate("2026-07-07")).toHaveLength(1);
+    expect(repos.recordingSessions.listByDate("2026-07-07")).toEqual([
+      {
+        id: "session-1",
+        startedAt: "2026-07-07T09:00:00.000Z",
+        endedAt: "2026-07-07T09:30:00.000Z"
+      }
+    ]);
     expect(repos.workEvents.listByDate("2026-07-07")).toHaveLength(1);
     expect(repos.reports.getByDate("2026-07-07")?.content).toContain("Reviewed");
     expect(repos.aiProviders.listEnabled()[0].name).toBe("MiniMax");

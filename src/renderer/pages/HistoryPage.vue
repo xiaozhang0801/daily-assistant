@@ -1,11 +1,30 @@
 <script setup lang="ts">
+import { onMounted, ref } from "vue";
 import { CalendarCheck, Clock, FileText } from "lucide-vue-next";
+import type { DailyHistoryDay } from "../../shared/types";
 
-const days = [
-  { date: "2026-07-08", duration: "0m", events: 0, report: "草稿" },
-  { date: "2026-07-07", duration: "0m", events: 0, report: "未生成" },
-  { date: "2026-07-06", duration: "0m", events: 0, report: "未生成" }
-];
+const days = ref<DailyHistoryDay[]>([]);
+const loading = ref(false);
+const errorMessage = ref("");
+
+async function loadHistory(): Promise<void> {
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard || loading.value) return;
+
+  loading.value = true;
+  errorMessage.value = "";
+  try {
+    days.value = await dashboard.getHistory();
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : "读取历史记录失败";
+  } finally {
+    loading.value = false;
+  }
+}
+
+onMounted(() => {
+  void loadHistory();
+});
 </script>
 
 <template>
@@ -24,23 +43,34 @@ const days = [
         <span>事件</span>
         <span>日报</span>
       </div>
-      <article v-for="day in days" :key="day.date" class="history-row">
-        <div class="date-cell">
-          <CalendarCheck :size="17" :stroke-width="1.9" />
-          <strong>{{ day.date }}</strong>
-        </div>
-        <div>
-          <Clock :size="16" :stroke-width="1.9" />
-          <span>{{ day.duration }}</span>
-        </div>
-        <div>
-          <span>{{ day.events }} 条</span>
-        </div>
-        <div>
-          <FileText :size="16" :stroke-width="1.9" />
-          <span>{{ day.report }}</span>
-        </div>
+      <article v-if="errorMessage" class="history-row table-state">
+        <span>{{ errorMessage }}</span>
       </article>
+      <article v-else-if="loading" class="history-row table-state">
+        <span>正在读取历史记录</span>
+      </article>
+      <article v-else-if="days.length === 0" class="history-row table-state">
+        <span>暂无历史记录</span>
+      </article>
+      <template v-else>
+        <article v-for="day in days" :key="day.date" class="history-row">
+          <div class="date-cell">
+            <CalendarCheck :size="17" :stroke-width="1.9" />
+            <strong>{{ day.date }}</strong>
+          </div>
+          <div>
+            <Clock :size="16" :stroke-width="1.9" />
+            <span>{{ day.duration }}</span>
+          </div>
+          <div>
+            <span>{{ day.events }} 条</span>
+          </div>
+          <div>
+            <FileText :size="16" :stroke-width="1.9" />
+            <span>{{ day.report }}</span>
+          </div>
+        </article>
+      </template>
     </div>
   </section>
 </template>
@@ -118,6 +148,15 @@ const days = [
   gap: 8px;
   color: var(--ink-soft);
   font-size: 13px;
+}
+
+.table-state {
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+
+.table-state span {
+  grid-column: 1 / -1;
 }
 
 .date-cell strong {

@@ -23,3 +23,12 @@ export interface DailyReport {
   providerId: string;
   modelName: string;
 }
+
+export type DailyHistoryReportStatus = "已生成" | "草稿" | "未生成";
+
+export interface DailyHistoryDay {
+  date: string;
+  duration: string;
+  events: number;
+  report: DailyHistoryReportStatus;
+}

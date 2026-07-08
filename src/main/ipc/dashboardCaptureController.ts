@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type { CaptureRecord, WorkEvent } from "../../shared/types";
 import { createDashboardState, type TodayDashboardState } from "./dashboardState";
 
@@ -16,12 +17,17 @@ interface DashboardCaptureControllerOptions {
   analyzeCapture?: (record: CaptureRecord) => Promise<WorkEvent | null>;
   saveWorkEvent?: (event: WorkEvent) => void | Promise<void>;
   deleteCapture?: (record: CaptureRecord) => void | Promise<void>;
+  startRecordingSession?: (session: { id: string; startedAt: string; endedAt: null }) => void;
+  endRecordingSession?: (id: string, endedAt: string) => void;
   getTodaySnapshot?: (state: TodayDashboardState) => TodayDashboardState;
+  now?: () => Date;
 }
 
 export function createDashboardCaptureController(options: DashboardCaptureControllerOptions) {
   const dashboardState = createDashboardState();
   let captureInFlight = false;
+  let activeSessionId: string | null = null;
+  const now = options.now ?? (() => new Date());
 
   async function captureOnce(): Promise<void> {
     if (captureInFlight) return;
@@ -51,17 +57,29 @@ export function createDashboardCaptureController(options: DashboardCaptureContro
     },
     pauseCapture: () => {
       options.scheduler.pause();
+      if (activeSessionId) {
+        options.endRecordingSession?.(activeSessionId, now().toISOString());
+        activeSessionId = null;
+      }
       return dashboardState.pauseCapture();
     },
     async resumeCapture() {
       options.scheduler.resume();
       options.scheduler.start();
+      if (!activeSessionId) {
+        activeSessionId = randomUUID();
+        options.startRecordingSession?.({
+          id: activeSessionId,
+          startedAt: now().toISOString(),
+          endedAt: null
+        });
+      }
       const result = dashboardState.resumeCapture();
       await captureOnce();
       return result;
     },
-    setReportDraft(content: string) {
-      dashboardState.setReportDraft(content);
+    setReportDraft(content: string, saved = false) {
+      dashboardState.setReportDraft(content, saved);
     }
   };
 }

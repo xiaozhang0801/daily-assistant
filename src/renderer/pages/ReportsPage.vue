@@ -1,11 +1,15 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
-import { Copy, FileDown, FileText } from "lucide-vue-next";
+import { Copy, FileDown, FileText, Save } from "lucide-vue-next";
 import { todayRefreshIntervalMs } from "./todayViewModel";
 import { buildTodayReportView, emptyDailyReport } from "./reportsViewModel";
 
 const currentReport = ref(emptyDailyReport);
 const reports = ref<Array<{ id: string; date: string; status: string; count: number }>>([]);
+const saving = ref(false);
+const reportDirty = ref(false);
+const saveStatusMessage = ref("");
+const saveErrorMessage = ref("");
 let refreshTimer: number | undefined;
 let loading = false;
 
@@ -15,6 +19,14 @@ async function copyReport(): Promise<void> {
 
 function todayDateKey(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function clockLabel(): string {
+  return new Date().toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
 }
 
 async function loadReports(): Promise<void> {
@@ -27,13 +39,46 @@ async function loadReports(): Promise<void> {
     const view = buildTodayReportView({
       date: todayDateKey(),
       reportDraft: today.reportDraft,
+      reportSaved: today.reportSaved,
       events: today.events
     });
-    currentReport.value = view.currentReport;
+    if (!reportDirty.value) {
+      currentReport.value = view.currentReport;
+    }
     reports.value = view.reports;
   } finally {
     loading = false;
   }
+}
+
+async function saveCurrentReport(): Promise<void> {
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard) return;
+
+  saving.value = true;
+  saveStatusMessage.value = "";
+  saveErrorMessage.value = "";
+  try {
+    const result = await dashboard.saveReport(currentReport.value);
+    currentReport.value = result.content;
+    reportDirty.value = false;
+    saveStatusMessage.value = `已保存 ${clockLabel()}`;
+    await loadReports();
+  } catch (error) {
+    saveErrorMessage.value = error instanceof Error ? error.message : "保存日报失败";
+  } finally {
+    saving.value = false;
+  }
+}
+
+function updateCurrentReport(event: Event): void {
+  currentReport.value = (event.target as HTMLTextAreaElement).value;
+  reportDirty.value = true;
+  saveErrorMessage.value = "";
+  if (saveStatusMessage.value.startsWith("已保存")) {
+    saveStatusMessage.value = "未保存修改";
+  }
+  reports.value = reports.value.map((report, index) => (index === 0 ? { ...report, status: "草稿" } : report));
 }
 
 function refreshWhenVisible(): void {
@@ -68,9 +113,15 @@ onBeforeUnmount(() => {
         <h1>日报库</h1>
       </div>
       <div class="header-actions">
+        <span v-if="saveErrorMessage" class="save-message error">{{ saveErrorMessage }}</span>
+        <span v-else-if="saveStatusMessage" class="save-message">{{ saveStatusMessage }}</span>
         <button type="button" title="复制当前日报" @click="copyReport">
           <Copy :size="16" :stroke-width="1.9" />
           <span>复制</span>
+        </button>
+        <button type="button" title="保存当前日报" :disabled="saving || !currentReport.trim()" @click="saveCurrentReport">
+          <Save :size="16" :stroke-width="1.9" />
+          <span>{{ saving ? "保存中" : "保存" }}</span>
         </button>
         <button type="button" title="导出 Markdown">
           <FileDown :size="16" :stroke-width="1.9" />
@@ -91,7 +142,7 @@ onBeforeUnmount(() => {
       </aside>
 
       <section class="editor-panel">
-        <textarea v-model="currentReport" spellcheck="false" aria-label="日报内容"></textarea>
+        <textarea :value="currentReport" spellcheck="false" aria-label="日报内容" @input="updateCurrentReport"></textarea>
       </section>
     </div>
   </section>
@@ -134,7 +185,18 @@ onBeforeUnmount(() => {
 
 .header-actions {
   display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.save-message {
+  color: var(--ok);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.save-message.error {
+  color: var(--danger);
 }
 
 .header-actions button {
@@ -161,6 +223,11 @@ onBeforeUnmount(() => {
   border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent);
+}
+
+.header-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .report-layout {

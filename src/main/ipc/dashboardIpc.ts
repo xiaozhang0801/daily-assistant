@@ -1,4 +1,3 @@
-import { randomUUID } from "node:crypto";
 import { readFile, unlink } from "node:fs/promises";
 import { desktopCapturer, ipcMain } from "electron";
 import type { CaptureRecord, WorkEvent, WorkEventDraft } from "../../shared/types";
@@ -9,16 +8,18 @@ import { captureScreenshot } from "../services/capture/screenshotCapture";
 import { createCaptureScheduler } from "../services/capture/captureScheduler";
 import type { AppRepositories } from "../services/storage/repositories";
 import { createDashboardCaptureController } from "./dashboardCaptureController";
-import { generateDashboardReport } from "./dashboardReport";
+import { buildDashboardHistory } from "./dashboardHistory";
+import { generateDashboardReport, saveDashboardReport } from "./dashboardReport";
 import { createDashboardState } from "./dashboardState";
 import { createDashboardSummaryProvider } from "./dashboardSummary";
+import { createWorkEventFromCapture } from "./workEventFactory";
 import { buildDailyReportFallback } from "../services/report/reportGenerator";
 
 interface DashboardController {
   getToday(): unknown;
   pauseCapture(): unknown;
   resumeCapture(): unknown;
-  setReportDraft(content: string): void;
+  setReportDraft(content: string, saved?: boolean): void;
 }
 
 interface DashboardIpcOptions {
@@ -31,36 +32,6 @@ function captureIntervalMs(repositories?: AppRepositories): number {
   const minutes = Number(repositories?.settings.get("capture.intervalMinutes") ?? "5");
   const safeMinutes = Number.isFinite(minutes) ? Math.max(1, Math.min(60, minutes)) : 5;
   return safeMinutes * 60_000;
-}
-
-function clampConfidence(value: number): number {
-  if (!Number.isFinite(value)) return 0;
-  return Math.max(0, Math.min(1, value));
-}
-
-function normalizeWorkEventDraft(draft: WorkEventDraft): WorkEventDraft {
-  return {
-    title: draft.title.trim() || "未命名活动",
-    summary: draft.summary.trim() || "AI 未返回摘要。",
-    category: draft.category.trim() || "未分类",
-    confidence: clampConfidence(draft.confidence)
-  };
-}
-
-function toWorkEvent(record: CaptureRecord, draft: WorkEventDraft): WorkEvent {
-  const normalized = normalizeWorkEventDraft(draft);
-
-  return {
-    id: randomUUID(),
-    captureId: record.id,
-    startedAt: record.capturedAt,
-    endedAt: record.capturedAt,
-    title: normalized.title,
-    summary: normalized.summary,
-    category: normalized.category,
-    confidence: normalized.confidence,
-    source: "ai"
-  };
 }
 
 function createScreenshotAnalyzer(repositories: AppRepositories) {
@@ -86,7 +57,9 @@ function createScreenshotAnalyzer(repositories: AppRepositories) {
       prompt
     });
 
-    return toWorkEvent(record, draft);
+    return createWorkEventFromCapture(record, draft, {
+      intervalMs: captureIntervalMs(repositories)
+    });
   };
 }
 
@@ -141,6 +114,8 @@ function createDefaultDashboardController(options: DashboardIpcOptions): Dashboa
     analyzeCapture: createScreenshotAnalyzer(repositories),
     saveWorkEvent: (event) => repositories.workEvents.save(event),
     deleteCapture: deleteScreenshotFile,
+    startRecordingSession: (session) => repositories.recordingSessions.save(session),
+    endRecordingSession: (id, endedAt) => repositories.recordingSessions.end(id, endedAt),
     getTodaySnapshot: (state) => summaryProvider.getToday(state)
   });
 
@@ -158,7 +133,18 @@ export function registerDashboardIpc(options: DashboardIpcOptions = {}): void {
     const result = options.repositories
       ? await generateDashboardReport({ repositories: options.repositories })
       : { content: buildDailyReportFallback((controller.getToday() as { events?: WorkEvent[] }).events ?? []) };
-    controller.setReportDraft(result.content);
+    controller.setReportDraft(result.content, false);
     return result;
   });
+  ipcMain.handle(dashboardChannels.saveReport, async (_event, content: string) => {
+    const reportContent = typeof content === "string" ? content : "";
+    const result = options.repositories
+      ? saveDashboardReport({ repositories: options.repositories, content: reportContent })
+      : { ok: true as const, content: reportContent, date: new Date().toISOString().slice(0, 10) };
+    controller.setReportDraft(result.content, true);
+    return result;
+  });
+  ipcMain.handle(dashboardChannels.getHistory, async () =>
+    options.repositories ? buildDashboardHistory({ repositories: options.repositories }) : []
+  );
 }

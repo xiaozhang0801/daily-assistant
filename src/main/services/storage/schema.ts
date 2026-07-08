@@ -9,6 +9,12 @@ CREATE TABLE IF NOT EXISTS captures (
   skip_reason TEXT
 );
 
+CREATE TABLE IF NOT EXISTS recording_sessions (
+  id TEXT PRIMARY KEY,
+  started_at TEXT NOT NULL,
+  ended_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS work_events (
   id TEXT PRIMARY KEY,
   capture_id TEXT NOT NULL,

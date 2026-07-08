@@ -6,7 +6,9 @@ contextBridge.exposeInMainWorld("dailyAssistant", {
     getToday: () => ipcRenderer.invoke(dashboardChannels.getToday),
     pauseCapture: () => ipcRenderer.invoke(dashboardChannels.pauseCapture),
     resumeCapture: () => ipcRenderer.invoke(dashboardChannels.resumeCapture),
-    generateReport: () => ipcRenderer.invoke(dashboardChannels.generateReport)
+    generateReport: () => ipcRenderer.invoke(dashboardChannels.generateReport),
+    saveReport: (content: string) => ipcRenderer.invoke(dashboardChannels.saveReport, content),
+    getHistory: () => ipcRenderer.invoke(dashboardChannels.getHistory)
   },
   settings: {
     get: () => ipcRenderer.invoke(settingsChannels.get),

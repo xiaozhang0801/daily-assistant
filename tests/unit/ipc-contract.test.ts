@@ -5,6 +5,8 @@ describe("IPC contract", () => {
   it("uses namespaced channel names", () => {
     expect(dashboardChannels.getToday).toBe("dashboard:getToday");
     expect(dashboardChannels.generateReport).toBe("dashboard:generateReport");
+    expect(dashboardChannels.saveReport).toBe("dashboard:saveReport");
+    expect(dashboardChannels.getHistory).toBe("dashboard:getHistory");
     expect(settingsChannels.get).toBe("settings:get");
     expect(settingsChannels.save).toBe("settings:save");
   });

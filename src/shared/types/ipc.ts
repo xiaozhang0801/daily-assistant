@@ -2,7 +2,9 @@ export const dashboardChannels = {
   getToday: "dashboard:getToday",
   pauseCapture: "dashboard:pauseCapture",
   resumeCapture: "dashboard:resumeCapture",
-  generateReport: "dashboard:generateReport"
+  generateReport: "dashboard:generateReport",
+  saveReport: "dashboard:saveReport",
+  getHistory: "dashboard:getHistory"
 } as const;
 
 export const settingsChannels = {

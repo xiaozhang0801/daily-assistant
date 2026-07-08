@@ -27,6 +27,22 @@ describe("today view model", () => {
     expect(source.map((item) => item.id)).toEqual(["oldest", "newest", "middle"]);
   });
 
+  it("sorts interval events by end time because start time is shifted back by the capture interval", () => {
+    const olderShortInterval = {
+      ...event("older-short-interval", "2026-07-08T09:55:00.000Z"),
+      endedAt: "2026-07-08T09:56:00.000Z"
+    };
+    const latestLongInterval = {
+      ...event("latest-long-interval", "2026-07-08T09:50:00.000Z"),
+      endedAt: "2026-07-08T10:00:00.000Z"
+    };
+
+    expect(sortEventsNewestFirst([olderShortInterval, latestLongInterval]).map((item) => item.id)).toEqual([
+      "latest-long-interval",
+      "older-short-interval"
+    ]);
+  });
+
   it("summarizes category counts for the timeline side panel", () => {
     const events = [
       event("dev-1", "2026-07-08T08:00:00.000Z"),

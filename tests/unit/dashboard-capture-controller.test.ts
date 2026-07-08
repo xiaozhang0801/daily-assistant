@@ -59,6 +59,31 @@ describe("dashboard capture controller", () => {
     expect(controller.getToday().recording).toBe(true);
   });
 
+  it("persists a recording session from resume to pause", async () => {
+    const scheduler = createSchedulerStub();
+    const startRecordingSession = vi.fn();
+    const endRecordingSession = vi.fn();
+    const times = [new Date("2026-07-08T09:00:00.000Z"), new Date("2026-07-08T09:10:00.000Z")];
+    const controller = createDashboardCaptureController({
+      scheduler,
+      captureNow: vi.fn().mockResolvedValue(createCaptureRecord()),
+      startRecordingSession,
+      endRecordingSession,
+      now: () => times.shift() ?? new Date("2026-07-08T09:10:00.000Z")
+    });
+
+    await controller.resumeCapture();
+    const session = startRecordingSession.mock.calls[0]?.[0];
+    controller.pauseCapture();
+
+    expect(session).toEqual({
+      id: expect.any(String),
+      startedAt: "2026-07-08T09:00:00.000Z",
+      endedAt: null
+    });
+    expect(endRecordingSession).toHaveBeenCalledWith(session.id, "2026-07-08T09:10:00.000Z");
+  });
+
   it("pauses scheduling when recording pauses", () => {
     const scheduler = createSchedulerStub();
     const controller = createDashboardCaptureController({

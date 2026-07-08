@@ -5,6 +5,7 @@ export const emptyDailyReport = "# 今日日报\n\n- 今日暂无记录。";
 interface TodayReportInput {
   date: string;
   reportDraft: string;
+  reportSaved: boolean;
   events: WorkEvent[];
 }
 
@@ -30,7 +31,7 @@ export function buildTodayReportView(input: TodayReportInput): TodayReportView {
       {
         id: "today",
         date: input.date,
-        status: hasGeneratedReport ? "已生成" : "草稿",
+        status: hasGeneratedReport && input.reportSaved ? "已保存" : "草稿",
         count: input.events.length
       }
     ]

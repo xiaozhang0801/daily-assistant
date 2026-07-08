@@ -9,3 +9,9 @@ export interface CaptureRecord {
   status: CaptureStatus;
   skipReason: string | null;
 }
+
+export interface RecordingSession {
+  id: string;
+  startedAt: string;
+  endedAt: string | null;
+}

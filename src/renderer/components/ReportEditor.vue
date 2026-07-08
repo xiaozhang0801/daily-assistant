@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { Clipboard, WandSparkles } from "lucide-vue-next";
+import { Clipboard, Save, WandSparkles } from "lucide-vue-next";
 
 defineProps<{
   modelValue: string;
   generating?: boolean;
+  saving?: boolean;
   statusMessage?: string;
   errorMessage?: string;
 }>();
@@ -11,6 +12,7 @@ defineProps<{
 const emit = defineEmits<{
   "update:modelValue": [value: string];
   generate: [];
+  save: [];
   copy: [];
 }>();
 </script>
@@ -28,6 +30,16 @@ const emit = defineEmits<{
         <button class="ghost-button" type="button" title="复制日报" @click="emit('copy')">
           <Clipboard :size="16" :stroke-width="1.9" />
           <span>复制</span>
+        </button>
+        <button
+          class="ghost-button"
+          type="button"
+          title="保存日报"
+          :disabled="saving || !modelValue.trim()"
+          @click="emit('save')"
+        >
+          <Save :size="16" :stroke-width="1.9" />
+          <span>{{ saving ? "保存中" : "保存" }}</span>
         </button>
         <button class="primary-button" type="button" title="生成日报" :disabled="generating" @click="emit('generate')">
           <WandSparkles :size="16" :stroke-width="1.9" />
@@ -130,6 +142,11 @@ const emit = defineEmits<{
 .ghost-button:hover {
   border-color: var(--line-strong);
   color: var(--ink);
+}
+
+.ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
 }
 
 .primary-button {

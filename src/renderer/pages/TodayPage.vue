@@ -14,6 +14,7 @@ interface TodayState {
   analyzedEventCount: number;
   providerStatus: string;
   events: WorkEvent[];
+  reportSaved: boolean;
 }
 
 const defaultReport = "# 今日日报\n\n- 今日暂无记录。";
@@ -22,10 +23,13 @@ const state = ref<TodayState>({
   capturedDurationMinutes: 0,
   analyzedEventCount: 0,
   providerStatus: "not_configured",
-  events: []
+  events: [],
+  reportSaved: false
 });
 const reportDraft = ref(defaultReport);
 const generating = ref(false);
+const saving = ref(false);
+const reportDirty = ref(false);
 const copyState = ref("复制");
 const reportStatusMessage = ref("");
 const reportErrorMessage = ref("");
@@ -50,7 +54,7 @@ const overview = computed(() => [
   },
   {
     label: "日报状态",
-    value: reportDraft.value.trim() === defaultReport ? "草稿" : "已生成",
+    value: reportDirty.value ? "未保存" : state.value.reportSaved ? "已保存" : "草稿",
     icon: FileText
   },
   {
@@ -59,6 +63,14 @@ const overview = computed(() => [
     icon: Database
   }
 ]);
+
+function clockLabel(): string {
+  return new Date().toLocaleTimeString("zh-CN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false
+  });
+}
 
 async function loadToday(preserveReportDraft = false): Promise<void> {
   const dashboard = window.dailyAssistant?.dashboard;
@@ -73,9 +85,10 @@ async function loadToday(preserveReportDraft = false): Promise<void> {
       capturedDurationMinutes: today.capturedDurationMinutes,
       analyzedEventCount: today.analyzedEventCount,
       providerStatus: today.providerStatus,
-      events: today.events
+      events: today.events,
+      reportSaved: today.reportSaved
     };
-    if (!preserveReportDraft) {
+    if (!preserveReportDraft && !reportDirty.value) {
       reportDraft.value = today.reportDraft || defaultReport;
     }
   } finally {
@@ -100,16 +113,42 @@ async function generateReport(): Promise<void> {
   try {
     const result = await window.dailyAssistant?.dashboard.generateReport();
     reportDraft.value = result?.content ?? defaultReport;
-    reportStatusMessage.value = `已生成 ${new Date().toLocaleTimeString("zh-CN", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
-    })}`;
+    reportDirty.value = true;
+    reportStatusMessage.value = `已生成 ${clockLabel()}，未保存`;
     await loadToday(true);
   } catch (error) {
     reportErrorMessage.value = error instanceof Error ? error.message : "生成日报失败";
   } finally {
     generating.value = false;
+  }
+}
+
+async function saveReport(): Promise<void> {
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard) return;
+
+  saving.value = true;
+  reportStatusMessage.value = "";
+  reportErrorMessage.value = "";
+  try {
+    const result = await dashboard.saveReport(reportDraft.value);
+    reportDraft.value = result.content;
+    reportDirty.value = false;
+    reportStatusMessage.value = `已保存 ${clockLabel()}`;
+    await loadToday(true);
+  } catch (error) {
+    reportErrorMessage.value = error instanceof Error ? error.message : "保存日报失败";
+  } finally {
+    saving.value = false;
+  }
+}
+
+function updateReportDraft(value: string): void {
+  reportDraft.value = value;
+  reportDirty.value = true;
+  reportErrorMessage.value = "";
+  if (reportStatusMessage.value.startsWith("已保存")) {
+    reportStatusMessage.value = "未保存修改";
   }
 }
 
@@ -177,11 +216,14 @@ onBeforeUnmount(() => {
       </div>
 
       <ReportEditor
-        v-model="reportDraft"
+        :model-value="reportDraft"
         :generating="generating"
+        :saving="saving"
         :status-message="reportStatusMessage"
         :error-message="reportErrorMessage"
+        @update:model-value="updateReportDraft"
         @generate="generateReport"
+        @save="saveReport"
         @copy="copyReport"
       />
       <span class="copy-toast" :class="{ visible: copyState === '已复制' }">{{ copyState }}</span>

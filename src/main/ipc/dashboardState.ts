@@ -7,6 +7,7 @@ export interface TodayDashboardState {
   providerStatus: string;
   events: WorkEvent[];
   reportDraft: string;
+  reportSaved: boolean;
 }
 
 export interface CaptureToggleResult {
@@ -21,7 +22,8 @@ export function createDashboardState(initial?: Partial<TodayDashboardState>) {
     analyzedEventCount: 0,
     providerStatus: "not_configured",
     events: [],
-    reportDraft: ""
+    reportDraft: "",
+    reportSaved: false
   };
 
   let state: TodayDashboardState = {
@@ -59,8 +61,8 @@ export function createDashboardState(initial?: Partial<TodayDashboardState>) {
         events: [...state.events, event]
       };
     },
-    setReportDraft(content: string) {
-      state = { ...state, reportDraft: content };
+    setReportDraft(content: string, saved = false) {
+      state = { ...state, reportDraft: content, reportSaved: saved };
     }
   };
 }

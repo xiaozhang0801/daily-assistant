@@ -15,6 +15,18 @@ interface GenerateDashboardReportResult {
   content: string;
 }
 
+interface SaveDashboardReportOptions {
+  repositories: AppRepositories;
+  content: string;
+  now?: () => Date;
+}
+
+interface SaveDashboardReportResult {
+  ok: true;
+  content: string;
+  date: string;
+}
+
 function dateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
@@ -52,8 +64,6 @@ export async function generateDashboardReport(
   const apiKey = options.repositories.settings.get("ai.apiKey");
   const createProvider = options.createProvider ?? createProviderRegistry().create;
 
-  let providerId = "local-fallback";
-  let modelName = "fallback";
   let content: string | null = null;
 
   if (profile && apiKey && profile.modelName) {
@@ -67,30 +77,37 @@ export async function generateDashboardReport(
         }),
         events.length
       );
-      providerId = profile.id;
-      modelName = profile.modelName;
     } catch {
       content = null;
     }
   }
 
   const reportContent = content ?? buildDailyReportFallback(events);
-  if (!content) {
-    providerId = "local-fallback";
-    modelName = "fallback";
-  }
-  const timestamp = generatedAt.toISOString();
+
+  return { content: reportContent };
+}
+
+export function saveDashboardReport(options: SaveDashboardReportOptions): SaveDashboardReportResult {
+  const now = options.now ?? (() => new Date());
+  const savedAt = now();
+  const date = dateKey(savedAt);
+  const timestamp = savedAt.toISOString();
+  const existingReport = options.repositories.reports.getByDate(date);
 
   options.repositories.reports.save({
     id: `daily-${date}`,
     date,
     type: "daily",
-    content: reportContent,
-    generatedAt: timestamp,
+    content: options.content,
+    generatedAt: existingReport?.generatedAt ?? timestamp,
     updatedAt: timestamp,
-    providerId,
-    modelName
+    providerId: existingReport?.providerId ?? "manual",
+    modelName: existingReport?.modelName ?? "manual"
   });
 
-  return { content: reportContent };
+  return {
+    ok: true,
+    content: options.content,
+    date
+  };
 }
