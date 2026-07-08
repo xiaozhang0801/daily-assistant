@@ -1,17 +1,15 @@
 import { ipcMain } from "electron";
 import { dashboardChannels } from "../../shared/types/ipc";
+import { createDashboardState } from "./dashboardState";
 
-export function registerDashboardIpc(): void {
-  ipcMain.handle(dashboardChannels.getToday, async () => ({
-    recording: false,
-    capturedDurationMinutes: 0,
-    analyzedEventCount: 0,
-    providerStatus: "not_configured",
-    events: [],
-    reportDraft: ""
-  }));
+export function registerDashboardIpc(dashboardState = createDashboardState()): void {
+  ipcMain.handle(dashboardChannels.getToday, async () => dashboardState.getToday());
 
-  ipcMain.handle(dashboardChannels.pauseCapture, async () => ({ ok: true }));
-  ipcMain.handle(dashboardChannels.resumeCapture, async () => ({ ok: true }));
-  ipcMain.handle(dashboardChannels.generateReport, async () => ({ content: "# 今日日报\n\n- 暂无记录。" }));
+  ipcMain.handle(dashboardChannels.pauseCapture, async () => dashboardState.pauseCapture());
+  ipcMain.handle(dashboardChannels.resumeCapture, async () => dashboardState.resumeCapture());
+  ipcMain.handle(dashboardChannels.generateReport, async () => {
+    const content = "# 今日日报\n\n- 暂无记录。";
+    dashboardState.setReportDraft(content);
+    return { content };
+  });
 }

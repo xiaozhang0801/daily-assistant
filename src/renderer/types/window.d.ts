@@ -12,8 +12,8 @@ declare global {
           events: import("../../shared/types").WorkEvent[];
           reportDraft: string;
         }>;
-        pauseCapture: () => Promise<{ ok: boolean }>;
-        resumeCapture: () => Promise<{ ok: boolean }>;
+        pauseCapture: () => Promise<{ ok: boolean; recording: boolean }>;
+        resumeCapture: () => Promise<{ ok: boolean; recording: boolean }>;
         generateReport: () => Promise<{ content: string }>;
       };
       settings: {

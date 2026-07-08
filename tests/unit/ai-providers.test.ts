@@ -62,8 +62,10 @@ describe("AI providers", () => {
     expect(registry.defaultProviderType).toBe("minimax");
   });
 
-  it("contains editable default prompt templates", () => {
-    expect(defaultScreenshotPrompt).toContain("Return JSON");
-    expect(defaultDailyReportPrompt).toContain("daily report");
+  it("contains editable Chinese default prompt templates", () => {
+    expect(defaultScreenshotPrompt).toContain("只返回 JSON");
+    expect(defaultScreenshotPrompt).toContain("截图");
+    expect(defaultDailyReportPrompt).toContain("中文日报");
+    expect(defaultDailyReportPrompt).toContain("Markdown");
   });
 });
