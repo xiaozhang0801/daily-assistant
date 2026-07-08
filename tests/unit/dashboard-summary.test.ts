@@ -90,4 +90,25 @@ describe("dashboard summary provider", () => {
       events: [workEvent]
     });
   });
+
+  it("uses the saved daily report as today's report draft", () => {
+    const repositories = createRepositoryStub();
+    vi.mocked(repositories.reports.getByDate).mockReturnValue({
+      id: "daily-2026-07-08",
+      date: "2026-07-08",
+      type: "daily",
+      content: "# 今日日报\n\n- 已保存的日报内容。",
+      generatedAt: "2026-07-08T10:00:00.000Z",
+      updatedAt: "2026-07-08T10:00:00.000Z",
+      providerId: "local-fallback",
+      modelName: "fallback"
+    });
+    const state = createDashboardState({ reportDraft: "" });
+    const summary = createDashboardSummaryProvider({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z")
+    });
+
+    expect(summary.getToday(state.getToday()).reportDraft).toBe("# 今日日报\n\n- 已保存的日报内容。");
+  });
 });

@@ -1,16 +1,63 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import { Copy, FileDown, FileText } from "lucide-vue-next";
+import { todayRefreshIntervalMs } from "./todayViewModel";
+import { buildTodayReportView, emptyDailyReport } from "./reportsViewModel";
 
-const currentReport = ref("# 今日日报\n\n- 今日暂无记录。");
-const reports = [
-  { id: "today", date: "2026-07-08", status: "草稿", count: 0 },
-  { id: "yesterday", date: "2026-07-07", status: "未生成", count: 0 }
-];
+const currentReport = ref(emptyDailyReport);
+const reports = ref<Array<{ id: string; date: string; status: string; count: number }>>([]);
+let refreshTimer: number | undefined;
+let loading = false;
 
 async function copyReport(): Promise<void> {
   await navigator.clipboard?.writeText(currentReport.value);
 }
+
+function todayDateKey(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function loadReports(): Promise<void> {
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard || loading) return;
+
+  loading = true;
+  try {
+    const today = await dashboard.getToday();
+    const view = buildTodayReportView({
+      date: todayDateKey(),
+      reportDraft: today.reportDraft,
+      events: today.events
+    });
+    currentReport.value = view.currentReport;
+    reports.value = view.reports;
+  } finally {
+    loading = false;
+  }
+}
+
+function refreshWhenVisible(): void {
+  if (document.visibilityState === "visible") {
+    void loadReports();
+  }
+}
+
+onMounted(() => {
+  void loadReports();
+  refreshTimer = window.setInterval(() => {
+    void loadReports();
+  }, todayRefreshIntervalMs);
+  window.addEventListener("focus", refreshWhenVisible);
+  document.addEventListener("visibilitychange", refreshWhenVisible);
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer);
+  }
+  window.removeEventListener("focus", refreshWhenVisible);
+  document.removeEventListener("visibilitychange", refreshWhenVisible);
+});
 </script>
 
 <template>

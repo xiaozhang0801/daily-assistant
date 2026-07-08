@@ -26,13 +26,15 @@ export function createDashboardSummaryProvider(options: DashboardSummaryProvider
       const today = dateKey(now());
       const captures = options.repositories.captures.listByDate(today);
       const events = options.repositories.workEvents.listByDate(today);
+      const savedReport = options.repositories.reports.getByDate(today);
 
       return {
         ...baseState,
         capturedDurationMinutes: captures.length,
         analyzedEventCount: events.length,
         providerStatus: resolveProviderStatus(options.repositories),
-        events
+        events,
+        reportDraft: savedReport?.content ?? baseState.reportDraft
       };
     }
   };
