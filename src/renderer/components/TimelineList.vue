@@ -44,6 +44,7 @@ function timeLabel(iso: string): string {
           <div class="event-meta">
             <CheckCircle2 :size="15" :stroke-width="1.9" />
             <span>{{ Math.round(event.confidence * 100) }}% 置信度</span>
+            <span v-if="event.mergedEventCount && event.mergedEventCount > 1">合并 {{ event.mergedEventCount }} 条</span>
             <span>{{ timeLabel(event.startedAt) }} - {{ timeLabel(event.endedAt) }}</span>
           </div>
         </div>

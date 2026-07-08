@@ -32,7 +32,11 @@ const recordingSession: RecordingSession = {
   endedAt: "2026-07-08T09:10:00.000Z"
 };
 
-function createRepositoryStub(): AppRepositories {
+function createRepositoryStub(
+  workEvents: WorkEvent[] = [workEvent],
+  recordingSessions: RecordingSession[] = [recordingSession],
+  captures: CaptureRecord[] = [captureRecord, { ...captureRecord, id: "capture-2" }]
+): AppRepositories {
   const settings = new Map<string, string>([
     ["ai.providerType", "openai_compatible"],
     ["ai.baseUrl", "https://api.example.com/v1"],
@@ -44,16 +48,16 @@ function createRepositoryStub(): AppRepositories {
   return {
     captures: {
       save: vi.fn(),
-      listByDate: vi.fn(() => [captureRecord, { ...captureRecord, id: "capture-2" }])
+      listByDate: vi.fn(() => captures)
     },
     recordingSessions: {
       save: vi.fn(),
       end: vi.fn(),
-      listByDate: vi.fn(() => [recordingSession])
+      listByDate: vi.fn(() => recordingSessions)
     },
     workEvents: {
       save: vi.fn(),
-      listByDate: vi.fn(() => [workEvent])
+      listByDate: vi.fn(() => workEvents)
     },
     reports: {
       save: vi.fn(),
@@ -142,5 +146,72 @@ describe("dashboard summary provider", () => {
       startedAt: "2026-07-08T08:55:00.000Z",
       endedAt: "2026-07-08T09:00:00.000Z"
     });
+  });
+
+  it("returns merged similar events for today's timeline", () => {
+    const repositories = createRepositoryStub([
+      {
+        ...workEvent,
+        id: "event-1",
+        captureId: "capture-1",
+        startedAt: "2026-07-08T09:00:00.000Z",
+        endedAt: "2026-07-08T09:05:00.000Z",
+        title: "开发日报助手时间线",
+        summary: "优化今日时间线重复记录展示。",
+        confidence: 0.8
+      },
+      {
+        ...workEvent,
+        id: "event-2",
+        captureId: "capture-2",
+        startedAt: "2026-07-08T09:05:00.000Z",
+        endedAt: "2026-07-08T09:10:00.000Z",
+        title: "继续开发日报助手时间线",
+        summary: "继续优化今日时间线的重复记录展示。",
+        confidence: 0.9
+      }
+    ]);
+    const state = createDashboardState();
+    const summary = createDashboardSummaryProvider({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z")
+    });
+
+    expect(summary.getToday(state.getToday())).toMatchObject({
+      analyzedEventCount: 1,
+      events: [
+        {
+          startedAt: "2026-07-08T09:00:00.000Z",
+          endedAt: "2026-07-08T09:10:00.000Z",
+          mergedEventCount: 2
+        }
+      ]
+    });
+  });
+
+  it("does not keep increasing duration for an open session while recording is paused", () => {
+    const repositories = createRepositoryStub(
+      [],
+      [
+        {
+          id: "session-open",
+          startedAt: "2026-07-08T09:00:00.000Z",
+          endedAt: null
+        }
+      ],
+      [
+        {
+          ...captureRecord,
+          capturedAt: "2026-07-08T09:10:00.000Z"
+        }
+      ]
+    );
+    const state = createDashboardState({ recording: false });
+    const summary = createDashboardSummaryProvider({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z")
+    });
+
+    expect(summary.getToday(state.getToday()).capturedDurationMinutes).toBe(10);
   });
 });

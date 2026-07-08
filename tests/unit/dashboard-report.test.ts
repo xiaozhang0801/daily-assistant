@@ -19,7 +19,8 @@ const workEvent: WorkEvent = {
 
 function createRepositoryStub(
   enabledProvider?: AIProviderProfile,
-  settingOverrides: Record<string, string> = {}
+  settingOverrides: Record<string, string> = {},
+  workEvents: WorkEvent[] = [workEvent]
 ): AppRepositories {
   const settings = new Map<string, string>([
     ["ai.apiKey", enabledProvider ? "api-key" : ""],
@@ -34,7 +35,7 @@ function createRepositoryStub(
     },
     workEvents: {
       save: vi.fn(),
-      listByDate: vi.fn(() => [workEvent])
+      listByDate: vi.fn(() => workEvents)
     },
     reports: {
       save: vi.fn(),
@@ -114,6 +115,60 @@ describe("dashboard report generation", () => {
     expect(result.content).toContain("Implemented realtime dashboard refresh");
     expect(result.content).not.toBe("已生成");
     expect(repositories.reports.save).not.toHaveBeenCalled();
+  });
+
+  it("passes merged similar work events into AI report generation", async () => {
+    const profile: AIProviderProfile = {
+      id: "primary",
+      name: "MiniMax",
+      type: "minimax",
+      baseUrl: null,
+      apiKeyRef: "settings:ai.apiKey",
+      modelName: "MiniMax-M3",
+      customHeaders: {},
+      enabled: true
+    };
+    const events: WorkEvent[] = [
+      {
+        ...workEvent,
+        id: "event-1",
+        startedAt: "2026-07-08T09:00:00.000Z",
+        endedAt: "2026-07-08T09:05:00.000Z",
+        title: "开发日报助手时间线",
+        summary: "优化今日时间线重复记录展示。",
+        confidence: 0.8
+      },
+      {
+        ...workEvent,
+        id: "event-2",
+        startedAt: "2026-07-08T09:05:00.000Z",
+        endedAt: "2026-07-08T09:10:00.000Z",
+        title: "继续开发日报助手时间线",
+        summary: "继续优化今日时间线的重复记录展示。",
+        confidence: 0.9
+      }
+    ];
+    const repositories = createRepositoryStub(profile, {}, events);
+    const aiInputs: DailyReportInput[] = [];
+
+    await generateDashboardReport({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z"),
+      createProvider: () => ({
+        ...createProviderStub("# AI 日报"),
+        generateDailyReport: async (input: DailyReportInput) => {
+          aiInputs.push(input);
+          return "# AI 日报";
+        }
+      })
+    });
+
+    expect(aiInputs[0].events).toHaveLength(1);
+    expect(aiInputs[0].events[0]).toMatchObject({
+      startedAt: "2026-07-08T09:00:00.000Z",
+      endedAt: "2026-07-08T09:10:00.000Z",
+      mergedEventCount: 2
+    });
   });
 
   it("builds a code-mode draft from local git activity without saving it", async () => {

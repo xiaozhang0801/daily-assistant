@@ -16,6 +16,7 @@ export interface WorkEvent {
   category: string;
   confidence: number;
   source: WorkEventSource;
+  mergedEventCount?: number;
 }
 
 export interface DailyReport {

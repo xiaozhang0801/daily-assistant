@@ -8,6 +8,7 @@ import { resolveDailyReportPrompt } from "../services/ai/prompts";
 import { createProviderRegistry } from "../services/ai/providerRegistry";
 import type { AIProvider } from "../services/ai/provider";
 import type { AppRepositories } from "../services/storage/repositories";
+import { mergeSimilarWorkEvents } from "../../shared/workEventMerge";
 import {
   collectGitActivity,
   formatGitActivityMarkdown,
@@ -67,6 +68,12 @@ function usefulReportContent(value: string, eventCount: number): string | null {
 
 function normalizeReportGenerationMode(mode: ReportGenerationMode | undefined): ReportGenerationMode {
   return mode === "code" || mode === "mixed" ? mode : "work";
+}
+
+function captureIntervalMs(repositories: AppRepositories): number {
+  const minutes = Number(repositories.settings.get("capture.intervalMinutes") ?? "5");
+  const safeMinutes = Number.isFinite(minutes) ? Math.max(1, Math.min(60, minutes)) : 5;
+  return safeMinutes * 60_000;
 }
 
 function gitActivityCount(codeActivity: GitActivitySummary | null): number {
@@ -139,7 +146,8 @@ export async function generateDashboardReport(
   const generatedAt = now();
   const date = dateKey(generatedAt);
   const mode = normalizeReportGenerationMode(options.mode);
-  const events = options.repositories.workEvents.listByDate(date);
+  const intervalMs = captureIntervalMs(options.repositories);
+  const events = mergeSimilarWorkEvents(options.repositories.workEvents.listByDate(date), { maxGapMs: intervalMs * 2 });
   const codeActivity =
     mode === "work"
       ? null
