@@ -43,7 +43,10 @@ app.whenReady().then(() => {
   const database = createDatabase(join(app.getPath("userData"), "daily-assistant.sqlite"));
   const repositories = createRepositories(database);
 
-  registerDashboardIpc();
+  registerDashboardIpc({
+    repositories,
+    screenshotsDirectory: join(app.getPath("userData"), "screenshots")
+  });
   registerSettingsIpc(repositories);
   createWindow();
 

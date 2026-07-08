@@ -46,6 +46,12 @@ export function createDashboardState(initial?: Partial<TodayDashboardState>) {
     getToday,
     pauseCapture: () => setRecording(false),
     resumeCapture: () => setRecording(true),
+    recordCapture() {
+      state = {
+        ...state,
+        capturedDurationMinutes: state.capturedDurationMinutes + 1
+      };
+    },
     setReportDraft(content: string) {
       state = { ...state, reportDraft: content };
     }
