@@ -9,7 +9,7 @@ defineProps<{
 <template>
   <aside class="privacy-panel" aria-label="隐私与采集">
     <div class="panel-heading">
-      <p>Privacy</p>
+      <p>采集策略</p>
       <h2>隐私与采集</h2>
     </div>
 
@@ -38,7 +38,7 @@ defineProps<{
       <div class="privacy-item">
         <LockKeyhole :size="18" :stroke-width="1.9" />
         <div>
-          <strong>黑名单窗口</strong>
+          <strong>排除窗口</strong>
           <span>命中规则时跳过截图。</span>
         </div>
       </div>
@@ -50,8 +50,12 @@ defineProps<{
 .privacy-panel {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-hairline);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(247, 249, 253, 0.76)),
+    var(--surface-raised);
+  box-shadow:
+    var(--shadow-hairline),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .panel-heading {
@@ -68,8 +72,7 @@ defineProps<{
   color: var(--accent);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .panel-heading h2 {
@@ -79,7 +82,7 @@ defineProps<{
 
 .privacy-list {
   display: grid;
-  gap: 8px;
+  gap: 9px;
   padding: 14px;
 }
 
@@ -88,10 +91,10 @@ defineProps<{
   grid-template-columns: 28px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 14px;
   padding: 11px 12px;
-  background: var(--surface-muted);
+  background: rgba(255, 255, 255, 0.58);
 }
 
 .privacy-item.ok {

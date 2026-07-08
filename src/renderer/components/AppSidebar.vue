@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from "vue";
-import { CalendarDays, FileClock, FileText, History, Settings } from "lucide-vue-next";
+import { CalendarDays, Database, FileClock, FileText, History, Settings } from "lucide-vue-next";
 import appLogo from "../assets/app-logo.svg";
 
 defineProps<{ active: string }>();
@@ -24,7 +24,7 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
       <img class="brand-mark" :src="appLogo" alt="" aria-hidden="true" />
       <div>
         <strong>日报助手</strong>
-        <span>Daily Workspace</span>
+        <span>工作记录台</span>
       </div>
     </div>
 
@@ -44,7 +44,7 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
     </div>
 
     <div class="sidebar-footer">
-      <span class="signal-dot" aria-hidden="true"></span>
+      <Database :size="15" :stroke-width="1.9" />
       <span>本地记录</span>
     </div>
   </nav>
@@ -53,30 +53,42 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
 <style scoped>
 .sidebar {
   display: flex;
-  width: 204px;
-  height: 100vh;
-  min-height: 100vh;
+  width: 232px;
+  height: 100dvh;
+  min-height: 100dvh;
   flex-direction: column;
-  border-right: 1px solid var(--line);
+  border-right: 1px solid rgba(217, 225, 236, 0.86);
   padding: 18px 14px;
-  background: rgba(255, 255, 255, 0.82);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(244, 247, 251, 0.78)),
+    var(--surface-glass);
   color: var(--ink);
-  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.7) inset;
+  box-shadow:
+    16px 0 44px rgba(57, 70, 96, 0.07),
+    inset -1px 0 0 rgba(255, 255, 255, 0.76);
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 6px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 20px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.56);
+  box-shadow: var(--shadow-hairline);
+  margin-bottom: 22px;
 }
 
 .brand-mark {
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   flex: 0 0 auto;
-  border-radius: var(--radius);
-  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.16);
+  border: 1px solid rgba(217, 225, 236, 0.92);
+  border-radius: 14px;
+  box-shadow:
+    0 12px 28px rgba(57, 70, 96, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
 
 .brand strong,
@@ -97,7 +109,7 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
 
 .nav-list {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .nav-item {
@@ -106,29 +118,38 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
   align-items: center;
   gap: 10px;
   border: 0;
-  border-radius: var(--radius);
-  padding: 10px 11px;
+  border: 1px solid transparent;
+  border-radius: 15px;
+  padding: 10px 12px;
   background: transparent;
   color: var(--ink-soft);
   cursor: pointer;
   text-align: left;
   transition:
-    background 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
+    background 240ms var(--motion),
+    border-color 240ms var(--motion),
+    color 240ms var(--motion),
+    transform 240ms var(--motion),
+    box-shadow 240ms var(--motion);
 }
 
 .nav-item:hover {
-  background: var(--surface-muted);
+  border-color: rgba(217, 225, 236, 0.9);
+  background: rgba(255, 255, 255, 0.62);
   color: var(--ink);
+  transform: translateX(1px);
 }
 
 .nav-item.active {
-  background: var(--accent-soft);
+  border-color: rgba(54, 87, 214, 0.18);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(232, 237, 255, 0.92)),
+    var(--accent-soft);
   color: var(--accent-strong);
   box-shadow:
     inset 3px 0 0 var(--accent),
-    var(--shadow-hairline);
+    0 12px 28px rgba(54, 87, 214, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
 }
 
 .nav-item span {
@@ -144,19 +165,12 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
   align-items: center;
   gap: 8px;
   margin-top: auto;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 10px 9px;
-  background: var(--surface-muted);
-  color: var(--ink-soft);
+  border: 1px solid rgba(217, 225, 236, 0.86);
+  border-radius: 16px;
+  padding: 11px 10px;
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--ink-muted);
   font-size: 12px;
-}
-
-.signal-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--ok);
-  box-shadow: 0 0 0 4px rgba(40, 131, 91, 0.22);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.76);
 }
 </style>

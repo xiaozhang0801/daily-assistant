@@ -12,7 +12,11 @@ body {
   margin: 0;
   min-width: 1024px;
   min-height: 720px;
-  background: var(--bg);
+  background:
+    radial-gradient(circle at 12% -10%, rgba(205, 216, 238, 0.78), transparent 36%),
+    radial-gradient(circle at 96% 4%, rgba(222, 229, 244, 0.82), transparent 30%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(238, 242, 248, 0.82) 48%, rgba(229, 235, 245, 0.92)),
+    var(--bg);
   color: var(--ink);
   overflow: hidden;
   text-rendering: geometricPrecision;
@@ -35,7 +39,7 @@ button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid rgba(54, 87, 214, 0.68);
   outline-offset: 2px;
 }
 
@@ -45,6 +49,10 @@ textarea {
 
 button:not(:disabled) {
   cursor: pointer;
+}
+
+button:not(:disabled):active {
+  transform: translateY(1px);
 }
 
 button:disabled {
@@ -60,6 +68,10 @@ textarea {
   min-height: 100vh;
 }
 
+::selection {
+  background: rgba(54, 87, 214, 0.16);
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -68,7 +80,7 @@ textarea {
 ::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 999px;
-  background: rgba(75, 85, 99, 0.28);
+  background: rgba(82, 98, 122, 0.28);
   background-clip: padding-box;
 }
 

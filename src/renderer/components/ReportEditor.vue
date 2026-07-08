@@ -21,7 +21,7 @@ const emit = defineEmits<{
   <section class="report-panel" aria-label="日报草稿">
     <div class="panel-heading">
       <div>
-        <p>Report</p>
+        <p>日报编辑</p>
         <h2>日报草稿</h2>
         <span v-if="errorMessage" class="panel-message error">{{ errorMessage }}</span>
         <span v-else-if="statusMessage" class="panel-message">{{ statusMessage }}</span>
@@ -65,8 +65,13 @@ const emit = defineEmits<{
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-hairline);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(250, 252, 255, 0.98)),
+    var(--surface);
+  overflow: hidden;
+  box-shadow:
+    var(--shadow-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .panel-heading {
@@ -74,9 +79,9 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 16px 18px;
+  padding: 17px 18px;
   border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  background: rgba(255, 255, 255, 0.64);
 }
 
 .panel-heading p,
@@ -88,8 +93,7 @@ const emit = defineEmits<{
   color: var(--accent);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .panel-heading h2 {
@@ -121,7 +125,7 @@ const emit = defineEmits<{
   min-height: 34px;
   align-items: center;
   gap: 6px;
-  border-radius: var(--radius);
+  border-radius: 999px;
   padding: 7px 10px;
   cursor: pointer;
   font-size: 13px;
@@ -135,7 +139,7 @@ const emit = defineEmits<{
 
 .ghost-button {
   border: 1px solid var(--line);
-  background: var(--surface-muted);
+  background: rgba(255, 255, 255, 0.72);
   color: var(--ink-soft);
 }
 
@@ -153,12 +157,16 @@ const emit = defineEmits<{
   border: 1px solid var(--accent);
   background: var(--accent);
   color: white;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
+  box-shadow:
+    0 10px 22px rgba(54, 87, 214, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .primary-button:hover:not(:disabled) {
   background: var(--accent-strong);
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+  box-shadow:
+    0 12px 26px rgba(54, 87, 214, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .primary-button:disabled {
@@ -171,10 +179,11 @@ const emit = defineEmits<{
   min-height: 360px;
   flex: 1;
   border: 0;
-  padding: 20px;
+  padding: 22px;
   background:
-    linear-gradient(180deg, rgba(247, 249, 252, 0.72), rgba(255, 255, 255, 0) 120px),
-    var(--surface);
+    linear-gradient(180deg, rgba(243, 246, 248, 0.78), rgba(255, 255, 255, 0) 140px),
+    repeating-linear-gradient(0deg, transparent 0, transparent 31px, rgba(82, 98, 122, 0.035) 32px),
+    #fcfdfd;
   color: var(--ink);
   font-family: "Cascadia Mono", Consolas, "Microsoft YaHei UI", monospace;
   font-size: 13px;

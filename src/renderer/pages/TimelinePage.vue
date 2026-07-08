@@ -51,7 +51,7 @@ onBeforeUnmount(() => {
   <section class="page">
     <div class="page-header">
       <div>
-        <p>Timeline</p>
+        <p>时间线视图</p>
         <h1>完整时间线</h1>
       </div>
       <span>今日</span>
@@ -60,7 +60,7 @@ onBeforeUnmount(() => {
     <div class="page-grid">
       <TimelineList :events="events" />
       <aside class="side-panel">
-        <p>分组</p>
+        <p>分类概览</p>
         <h2>工作类型</h2>
         <div v-if="categorySummary.length" class="category-list">
           <div v-for="item in categorySummary" :key="item.label">
@@ -80,7 +80,7 @@ onBeforeUnmount(() => {
   height: 100%;
   min-height: 0;
   flex-direction: column;
-  padding: 24px 26px;
+  padding: 26px 28px;
   background: transparent;
   overflow: hidden;
 }
@@ -102,24 +102,26 @@ onBeforeUnmount(() => {
   color: var(--accent);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .page-header h1 {
   margin-top: 5px;
-  font-size: 25px;
+  font-size: 28px;
+  font-weight: 760;
 }
 
 .page-header > span {
   border: 1px solid var(--line);
   border-radius: 999px;
-  padding: 7px 11px;
-  background: var(--surface);
+  padding: 7px 12px;
+  background: var(--surface-raised);
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 700;
-  box-shadow: var(--shadow-hairline);
+  box-shadow:
+    var(--shadow-hairline),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .page-grid {
@@ -134,9 +136,11 @@ onBeforeUnmount(() => {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 18px;
-  background: var(--surface);
+  background: var(--surface-raised);
   overflow: auto;
-  box-shadow: var(--shadow-hairline);
+  box-shadow:
+    var(--shadow-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .side-panel p,
@@ -148,8 +152,7 @@ onBeforeUnmount(() => {
   color: var(--accent);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .side-panel h2 {
@@ -167,8 +170,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 14px;
   padding: 10px 12px;
   background: var(--surface-muted);
 }

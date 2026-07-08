@@ -31,7 +31,7 @@ onMounted(() => {
   <section class="page">
     <div class="page-header">
       <div>
-        <p>History</p>
+        <p>历史归档</p>
         <h1>历史记录</h1>
       </div>
     </div>
@@ -77,8 +77,8 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  min-height: 100vh;
-  padding: 24px 26px;
+  min-height: 100dvh;
+  padding: 26px 28px;
   background: transparent;
 }
 
@@ -95,21 +95,23 @@ onMounted(() => {
   color: var(--accent);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .page-header h1 {
   margin-top: 5px;
-  font-size: 25px;
+  font-size: 28px;
+  font-weight: 760;
 }
 
 .history-panel {
   overflow: hidden;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-hairline);
+  background: var(--surface-raised);
+  box-shadow:
+    var(--shadow-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .table-head,
@@ -123,7 +125,7 @@ onMounted(() => {
 
 .table-head {
   border-bottom: 1px solid var(--line);
-  background: var(--surface-muted);
+  background: rgba(243, 246, 248, 0.82);
   color: var(--ink-muted);
   font-size: 12px;
   font-weight: 800;

@@ -82,7 +82,7 @@ onMounted(() => {
   <section class="page">
     <div class="page-header">
       <div>
-        <p>Settings</p>
+        <p>系统设置</p>
         <h1>设置</h1>
       </div>
       <div class="header-actions">
@@ -194,8 +194,8 @@ onMounted(() => {
 
 <style scoped>
 .page {
-  min-height: 100vh;
-  padding: 24px 26px;
+  min-height: 100dvh;
+  padding: 26px 28px;
   background: transparent;
 }
 
@@ -216,13 +216,13 @@ onMounted(() => {
   color: var(--accent);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .page-header h1 {
   margin-top: 5px;
-  font-size: 25px;
+  font-size: 28px;
+  font-weight: 760;
 }
 
 .header-actions {
@@ -237,7 +237,7 @@ onMounted(() => {
   min-height: 36px;
   align-items: center;
   gap: 6px;
-  border-radius: var(--radius);
+  border-radius: 999px;
   padding: 8px 12px;
   cursor: pointer;
   font-size: 13px;
@@ -253,12 +253,14 @@ onMounted(() => {
   border: 1px solid var(--accent);
   background: var(--accent);
   color: white;
-  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
+  box-shadow:
+    0 10px 22px rgba(54, 87, 214, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .test-button {
   border: 1px solid var(--line);
-  background: var(--surface);
+  background: var(--surface-raised);
   color: var(--ink-soft);
 }
 
@@ -269,7 +271,9 @@ onMounted(() => {
 
 .save-button:hover {
   background: var(--accent-strong);
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
+  box-shadow:
+    0 12px 26px rgba(54, 87, 214, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
 .settings-grid {
@@ -282,8 +286,10 @@ onMounted(() => {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 18px;
-  background: var(--surface);
-  box-shadow: var(--shadow-hairline);
+  background: var(--surface-raised);
+  box-shadow:
+    var(--shadow-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .settings-panel.wide {
@@ -312,14 +318,14 @@ onMounted(() => {
   gap: 4px;
   margin-bottom: 14px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 999px;
   padding: 4px;
   background: var(--surface-muted);
 }
 
 .segmented button {
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   padding: 8px;
   background: transparent;
   cursor: pointer;
@@ -352,7 +358,7 @@ input,
 textarea {
   width: 100%;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 12px;
   background: var(--surface-muted);
   color: var(--ink);
   transition:
@@ -363,9 +369,9 @@ textarea {
 
 input:focus,
 textarea:focus {
-  border-color: rgba(37, 99, 235, 0.45);
+  border-color: rgba(54, 87, 214, 0.45);
   background: var(--surface);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+  box-shadow: var(--ring);
 }
 
 input {
@@ -423,7 +429,7 @@ textarea {
   gap: 12px;
   margin-top: 16px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 14px;
   padding: 12px;
   background: var(--surface-muted);
   cursor: pointer;

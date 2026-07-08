@@ -23,7 +23,7 @@ function timeLabel(iso: string): string {
   <section class="timeline-panel" aria-label="今日时间线">
     <div class="panel-heading">
       <div>
-        <p>Timeline</p>
+        <p>记录流</p>
         <h2>今日时间线</h2>
       </div>
       <span>{{ sortedEvents.length }} 条</span>
@@ -66,9 +66,13 @@ function timeLabel(iso: string): string {
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(250, 252, 255, 0.98)),
+    var(--surface);
   overflow: hidden;
-  box-shadow: var(--shadow-hairline);
+  box-shadow:
+    var(--shadow-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .panel-heading {
@@ -76,7 +80,7 @@ function timeLabel(iso: string): string {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 16px 18px 14px;
+  padding: 17px 18px 15px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -89,8 +93,7 @@ function timeLabel(iso: string): string {
   color: var(--accent);
   font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .panel-heading h2 {
@@ -100,7 +103,7 @@ function timeLabel(iso: string): string {
 
 .panel-heading span {
   border-radius: 999px;
-  padding: 5px 9px;
+  padding: 5px 10px;
   background: var(--accent-soft);
   color: var(--accent);
   font-size: 12px;
@@ -111,25 +114,34 @@ function timeLabel(iso: string): string {
   display: grid;
   min-height: 0;
   flex: 1;
-  gap: 0;
+  gap: 8px;
   overflow: auto;
-  padding: 4px 0;
+  padding: 12px;
 }
 
 .event-row {
   display: grid;
-  grid-template-columns: 72px minmax(0, 1fr);
-  gap: 14px;
-  padding: 15px 18px;
-  transition: background 160ms ease;
+  grid-template-columns: 82px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 14px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.86), rgba(247, 249, 253, 0.72)),
+    var(--surface);
+  box-shadow: var(--shadow-hairline);
+  transition:
+    background 240ms var(--motion),
+    border-color 240ms var(--motion),
+    transform 240ms var(--motion),
+    box-shadow 240ms var(--motion);
 }
 
 .event-row:hover {
-  background: var(--surface-muted);
-}
-
-.event-row + .event-row {
-  border-top: 1px solid var(--line);
+  border-color: rgba(54, 87, 214, 0.16);
+  background: var(--surface);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(57, 70, 96, 0.08);
 }
 
 .time-cell {
@@ -139,7 +151,7 @@ function timeLabel(iso: string): string {
   color: var(--ink-muted);
   font-size: 12px;
   font-weight: 700;
-  padding-top: 2px;
+  padding-top: 3px;
 }
 
 .event-body {
@@ -156,6 +168,7 @@ function timeLabel(iso: string): string {
 .event-title h3 {
   overflow: hidden;
   margin: 0;
+  color: var(--ink);
   font-size: 14px;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -164,10 +177,11 @@ function timeLabel(iso: string): string {
 .event-title span {
   flex: 0 0 auto;
   border-radius: 999px;
-  padding: 3px 8px;
-  background: var(--teal-soft);
-  color: var(--ink-soft);
+  padding: 4px 8px;
+  background: var(--info-soft);
+  color: var(--accent-strong);
   font-size: 11px;
+  font-weight: 750;
 }
 
 .event-body p {
@@ -195,7 +209,9 @@ function timeLabel(iso: string): string {
   padding: 24px;
   color: var(--ink-muted);
   text-align: center;
-  background: var(--surface-muted);
+  background:
+    linear-gradient(145deg, rgba(54, 87, 214, 0.08), rgba(255, 255, 255, 0.68)),
+    var(--surface-muted);
 }
 
 .empty-state h3,

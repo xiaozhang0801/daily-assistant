@@ -109,7 +109,7 @@ onBeforeUnmount(() => {
   <section class="page">
     <div class="page-header">
       <div>
-        <p>Reports</p>
+        <p>报告归档</p>
         <h1>日报库</h1>
       </div>
       <div class="header-actions">
@@ -136,7 +136,7 @@ onBeforeUnmount(() => {
           <FileText :size="17" :stroke-width="1.9" />
           <div>
             <strong>{{ report.date }}</strong>
-            <span>{{ report.status }} · {{ report.count }} 条事件</span>
+            <span>{{ report.status }}，{{ report.count }} 条事件</span>
           </div>
         </article>
       </aside>
@@ -151,9 +151,9 @@ onBeforeUnmount(() => {
 <style scoped>
 .page {
   display: flex;
-  min-height: 100vh;
+  min-height: 100dvh;
   flex-direction: column;
-  padding: 24px 26px;
+  padding: 26px 28px;
   background: transparent;
 }
 
@@ -174,13 +174,13 @@ onBeforeUnmount(() => {
   color: var(--accent);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  letter-spacing: 0;
 }
 
 .page-header h1 {
   margin-top: 5px;
-  font-size: 25px;
+  font-size: 28px;
+  font-weight: 760;
 }
 
 .header-actions {
@@ -205,18 +205,19 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
+  border-radius: 999px;
   padding: 8px 11px;
-  background: var(--surface);
+  background: var(--surface-raised);
   color: var(--ink-soft);
   cursor: pointer;
   font-size: 13px;
   font-weight: 750;
   transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease,
-    box-shadow 160ms ease;
+    border-color 240ms var(--motion),
+    background 240ms var(--motion),
+    color 240ms var(--motion),
+    box-shadow 240ms var(--motion),
+    transform 240ms var(--motion);
 }
 
 .header-actions button:hover {
@@ -242,8 +243,12 @@ onBeforeUnmount(() => {
 .editor-panel {
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: var(--surface);
-  box-shadow: var(--shadow-hairline);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(247, 249, 253, 0.78)),
+    var(--surface-raised);
+  box-shadow:
+    var(--shadow-soft),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .report-list {
@@ -258,21 +263,23 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: 24px minmax(0, 1fr);
   gap: 10px;
-  border-radius: var(--radius);
+  border-radius: 14px;
   padding: 12px;
   color: var(--ink-soft);
   transition:
-    background 160ms ease,
-    color 160ms ease;
+    background 240ms var(--motion),
+    color 240ms var(--motion),
+    transform 240ms var(--motion);
 }
 
 .report-row:first-child {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .report-row:hover {
   background: var(--surface-muted);
+  transform: translateX(1px);
 }
 
 .report-row strong,
@@ -302,8 +309,9 @@ onBeforeUnmount(() => {
   border: 0;
   padding: 22px;
   background:
-    linear-gradient(180deg, rgba(247, 249, 252, 0.72), rgba(255, 255, 255, 0) 130px),
-    var(--surface);
+    linear-gradient(180deg, rgba(243, 246, 248, 0.78), rgba(255, 255, 255, 0) 130px),
+    repeating-linear-gradient(0deg, transparent 0, transparent 31px, rgba(82, 98, 122, 0.035) 32px),
+    #fcfdfd;
   color: var(--ink);
   font-family: "Cascadia Mono", Consolas, "Microsoft YaHei UI", monospace;
   font-size: 13px;

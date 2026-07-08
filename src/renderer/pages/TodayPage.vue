@@ -250,14 +250,14 @@ onBeforeUnmount(() => {
   grid-template-rows: auto minmax(0, 1fr);
   gap: 14px;
   overflow: hidden;
-  padding: 18px 20px 20px;
+  padding: 20px 22px 22px;
 }
 
 .overview-strip {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: repeat(4, minmax(120px, 1fr)) minmax(190px, 1.15fr);
-  gap: 12px;
+  gap: 14px;
 }
 
 .overview-item,
@@ -266,22 +266,24 @@ onBeforeUnmount(() => {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface-raised);
-  box-shadow: var(--shadow-hairline);
+  box-shadow:
+    var(--shadow-hairline),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .overview-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 13px 14px;
+  padding: 14px 15px;
 }
 
 .overview-item svg {
   width: 34px;
   height: 34px;
   flex: 0 0 auto;
-  border: 1px solid rgba(37, 99, 235, 0.12);
-  border-radius: var(--radius);
+  border: 1px solid rgba(54, 87, 214, 0.14);
+  border-radius: 13px;
   padding: 8px;
   background: var(--accent-soft);
   color: var(--accent);
@@ -301,7 +303,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   margin-top: 4px;
   color: var(--ink);
-  font-size: 18px;
+  font-size: 19px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -310,7 +312,9 @@ onBeforeUnmount(() => {
   display: grid;
   align-content: center;
   padding: 13px 14px;
-  background: var(--surface);
+  background:
+    linear-gradient(135deg, rgba(82, 98, 122, 0.045), rgba(255, 255, 255, 0.68)),
+    var(--surface);
 }
 
 .activity-note strong {
@@ -329,10 +333,12 @@ onBeforeUnmount(() => {
   right: 26px;
   bottom: 26px;
   border-radius: 999px;
-  padding: 7px 12px;
-  background: var(--surface-strong);
-  color: white;
+  padding: 8px 13px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--accent-strong);
   font-size: 12px;
+  box-shadow: var(--shadow-soft);
   opacity: 0;
   transform: translateY(8px);
   transition:

@@ -54,13 +54,17 @@ const providerText = computed(() => {
 <style scoped>
 .status-bar {
   display: flex;
-  min-height: 88px;
+  min-height: 92px;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 18px 26px;
+  padding: 18px 28px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.78);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(247, 249, 253, 0.7)),
+    var(--surface-glass);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.72) inset;
 }
 
 .title-block p {
@@ -68,20 +72,21 @@ const providerText = computed(() => {
   color: var(--accent);
   font-size: 12px;
   font-weight: 800;
-  letter-spacing: 0.02em;
+  letter-spacing: 0;
 }
 
 .title-block h1 {
   margin: 0;
   color: var(--ink);
-  font-size: 23px;
+  font-size: 27px;
+  font-weight: 760;
   letter-spacing: 0;
 }
 
 .metrics {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
 }
 
 .metric {
@@ -90,24 +95,26 @@ const providerText = computed(() => {
   align-items: center;
   gap: 6px;
   border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 7px 11px;
-  background: rgba(255, 255, 255, 0.74);
+  border-radius: 999px;
+  padding: 7px 12px;
+  background: rgba(255, 255, 255, 0.76);
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 650;
   white-space: nowrap;
-  box-shadow: var(--shadow-hairline);
+  box-shadow:
+    var(--shadow-hairline),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82);
 }
 
 .state-metric.active {
-  border-color: rgba(22, 133, 95, 0.24);
+  border-color: rgba(54, 87, 214, 0.2);
   background: var(--ok-soft);
   color: var(--ok);
 }
 
 .provider-metric.ready {
-  border-color: rgba(37, 99, 235, 0.2);
+  border-color: rgba(54, 87, 214, 0.22);
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
@@ -120,24 +127,29 @@ const providerText = computed(() => {
 
 .control-button {
   display: inline-flex;
-  min-height: 38px;
+  min-height: 40px;
   align-items: center;
   gap: 6px;
   border: 1px solid var(--accent);
-  border-radius: var(--radius);
-  padding: 8px 13px;
+  border-radius: 999px;
+  padding: 8px 15px;
   background: var(--accent);
   color: white;
   cursor: pointer;
   font-weight: 760;
-  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+  box-shadow:
+    0 12px 26px rgba(54, 87, 214, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition:
-    background 160ms ease,
-    box-shadow 160ms ease;
+    background 240ms var(--motion),
+    box-shadow 240ms var(--motion),
+    transform 240ms var(--motion);
 }
 
 .control-button:hover {
   background: var(--accent-strong);
-  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.26);
+  box-shadow:
+    0 14px 30px rgba(54, 87, 214, 0.24),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 </style>
