@@ -1,46 +1,41 @@
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import AppSidebar from "./components/AppSidebar.vue";
+import HistoryPage from "./pages/HistoryPage.vue";
+import ReportsPage from "./pages/ReportsPage.vue";
+import SettingsPage from "./pages/SettingsPage.vue";
+import TimelinePage from "./pages/TimelinePage.vue";
+import TodayPage from "./pages/TodayPage.vue";
+
+const activePage = ref("today");
+const activeComponent = computed(() => {
+  if (activePage.value === "timeline") return TimelinePage;
+  if (activePage.value === "reports") return ReportsPage;
+  if (activePage.value === "history") return HistoryPage;
+  if (activePage.value === "settings") return SettingsPage;
+  return TodayPage;
+});
+</script>
+
 <template>
-  <main class="starter-shell">
-    <section class="starter-panel">
-      <p class="eyebrow">Daily Assistant MVP</p>
-      <h1>日报助手</h1>
-      <p class="summary">桌面端工作台已初始化，后续任务会接入截图、AI 分析、时间线和报告编辑。</p>
-    </section>
-  </main>
+  <div class="app-shell">
+    <AppSidebar :active="activePage" @select="activePage = $event" />
+    <main class="main-panel">
+      <component :is="activeComponent" />
+    </main>
+  </div>
 </template>
 
 <style scoped>
-.starter-shell {
-  display: grid;
+.app-shell {
+  display: flex;
   min-height: 100vh;
-  place-items: center;
-  padding: 32px;
+  background: var(--bg);
 }
 
-.starter-panel {
-  width: min(560px, 100%);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 32px;
-  background: var(--surface);
-  box-shadow: var(--shadow);
-}
-
-.eyebrow {
-  margin: 0 0 8px;
-  color: var(--accent-strong);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-h1 {
-  margin: 0 0 12px;
-  font-size: 32px;
-}
-
-.summary {
-  margin: 0;
-  color: var(--ink-soft);
-  line-height: 1.7;
+.main-panel {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
 }
 </style>
