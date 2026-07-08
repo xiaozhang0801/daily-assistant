@@ -1,0 +1,17 @@
+:root {
+  color-scheme: light;
+  --bg: #f6f4ef;
+  --surface: #fffdf8;
+  --surface-muted: #ece7dc;
+  --ink: #1e2528;
+  --ink-soft: #5c676b;
+  --line: #d8d0c2;
+  --accent: #0f8f7f;
+  --accent-strong: #086a5e;
+  --warning: #c9822b;
+  --danger: #b94b48;
+  --ok: #28835b;
+  --shadow: 0 18px 50px rgba(30, 37, 40, 0.12);
+  --radius: 8px;
+  font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+}

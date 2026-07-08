@@ -1,0 +1,28 @@
+{
+  "name": "daily-assistant",
+  "version": "0.1.0",
+  "description": "Personal desktop daily report assistant.",
+  "private": true,
+  "type": "module",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "vue-tsc --noEmit && electron-vite build",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "lint": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.5.39"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "electron": "^43.1.0",
+    "electron-vite": "^5.0.0",
+    "typescript": "^6.0.3",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.10",
+    "vue-tsc": "^3.3.6"
+  }
+}
