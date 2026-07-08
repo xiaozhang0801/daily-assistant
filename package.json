@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "vue-tsc --noEmit && electron-vite build",
-    "test": "vitest run --config vitest.config.ts",
+    "test": "vue-tsc --noEmit && vitest run --config vitest.config.ts",
     "test:watch": "vitest",
     "lint": "vue-tsc --noEmit"
   },
