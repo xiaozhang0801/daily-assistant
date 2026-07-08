@@ -1,11 +1,13 @@
 import { describe, expect, expectTypeOf, it } from "vitest";
 import type {
   AIProviderProfile,
+  AIProviderType,
   AppSetting,
   CaptureRecord,
   CaptureSettings,
   CaptureStatus,
   DailyReport,
+  PromptPurpose,
   PromptTemplate,
   ProviderStatus,
   ReportType,
@@ -69,6 +71,8 @@ describe("shared domain types", () => {
   });
 
   it("exports the remaining shared configuration and AI types", () => {
+    const providerType = "minimax" satisfies AIProviderType;
+    const promptPurpose = "daily_report" satisfies PromptPurpose;
     const captureStatus = "analyzed" satisfies CaptureStatus;
     const reportType = "daily" satisfies ReportType;
     const eventSource = "manual" satisfies WorkEventSource;
@@ -106,6 +110,8 @@ describe("shared domain types", () => {
       blacklist: ["Password Manager"]
     } satisfies CaptureSettings;
 
+    expect(providerType).toBe("minimax");
+    expect(promptPurpose).toBe("daily_report");
     expect(captureStatus).toBe("analyzed");
     expect(reportType).toBe("daily");
     expect(eventSource).toBe("manual");
