@@ -2,6 +2,7 @@ import { app, BrowserWindow, shell } from "electron";
 import { join } from "node:path";
 import { registerDashboardIpc } from "./ipc/dashboardIpc";
 import { registerSettingsIpc } from "./ipc/settingsIpc";
+import { resolvePreloadPath } from "./preloadPath";
 import { createDatabase } from "./services/storage/database";
 import { createRepositories } from "./services/storage/repositories";
 
@@ -15,7 +16,7 @@ function createWindow(): void {
     autoHideMenuBar: true,
     backgroundColor: "#f6f4ef",
     webPreferences: {
-      preload: join(__dirname, "../preload/preload.js"),
+      preload: resolvePreloadPath(__dirname),
       sandbox: false,
       contextIsolation: true,
       nodeIntegration: false
