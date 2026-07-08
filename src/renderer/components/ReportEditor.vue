@@ -4,6 +4,8 @@ import { Clipboard, WandSparkles } from "lucide-vue-next";
 defineProps<{
   modelValue: string;
   generating?: boolean;
+  statusMessage?: string;
+  errorMessage?: string;
 }>();
 
 const emit = defineEmits<{
@@ -19,6 +21,8 @@ const emit = defineEmits<{
       <div>
         <p>Report</p>
         <h2>日报草稿</h2>
+        <span v-if="errorMessage" class="panel-message error">{{ errorMessage }}</span>
+        <span v-else-if="statusMessage" class="panel-message">{{ statusMessage }}</span>
       </div>
       <div class="actions">
         <button class="ghost-button" type="button" title="复制日报" @click="emit('copy')">
@@ -79,6 +83,18 @@ const emit = defineEmits<{
 .panel-heading h2 {
   margin-top: 4px;
   font-size: 17px;
+}
+
+.panel-message {
+  display: block;
+  margin-top: 6px;
+  color: var(--ok);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.panel-message.error {
+  color: var(--danger);
 }
 
 .actions {

@@ -9,8 +9,10 @@ import { captureScreenshot } from "../services/capture/screenshotCapture";
 import { createCaptureScheduler } from "../services/capture/captureScheduler";
 import type { AppRepositories } from "../services/storage/repositories";
 import { createDashboardCaptureController } from "./dashboardCaptureController";
+import { generateDashboardReport } from "./dashboardReport";
 import { createDashboardState } from "./dashboardState";
 import { createDashboardSummaryProvider } from "./dashboardSummary";
+import { buildDailyReportFallback } from "../services/report/reportGenerator";
 
 interface DashboardController {
   getToday(): unknown;
@@ -153,8 +155,10 @@ export function registerDashboardIpc(options: DashboardIpcOptions = {}): void {
   ipcMain.handle(dashboardChannels.pauseCapture, async () => controller.pauseCapture());
   ipcMain.handle(dashboardChannels.resumeCapture, async () => controller.resumeCapture());
   ipcMain.handle(dashboardChannels.generateReport, async () => {
-    const content = "# 今日日报\n\n- 暂无记录。";
-    controller.setReportDraft(content);
-    return { content };
+    const result = options.repositories
+      ? await generateDashboardReport({ repositories: options.repositories })
+      : { content: buildDailyReportFallback((controller.getToday() as { events?: WorkEvent[] }).events ?? []) };
+    controller.setReportDraft(result.content);
+    return result;
   });
 }

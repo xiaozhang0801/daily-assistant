@@ -2,14 +2,13 @@
 import { computed } from "vue";
 import { CheckCircle2, Clock3 } from "lucide-vue-next";
 import type { WorkEvent } from "../../shared/types";
+import { sortEventsNewestFirst } from "../pages/todayViewModel";
 
 const props = defineProps<{
   events: WorkEvent[];
 }>();
 
-const sortedEvents = computed(() =>
-  [...props.events].sort((a, b) => new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime())
-);
+const sortedEvents = computed(() => sortEventsNewestFirst(props.events));
 
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString("zh-CN", {
@@ -62,11 +61,13 @@ function timeLabel(iso: string): string {
 <style scoped>
 .timeline-panel {
   display: flex;
+  height: 100%;
   min-height: 0;
   flex-direction: column;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
+  overflow: hidden;
   box-shadow: var(--shadow-hairline);
 }
 
@@ -108,6 +109,8 @@ function timeLabel(iso: string): string {
 
 .event-list {
   display: grid;
+  min-height: 0;
+  flex: 1;
   gap: 0;
   overflow: auto;
   padding: 4px 0;
@@ -185,6 +188,7 @@ function timeLabel(iso: string): string {
 .empty-state {
   display: grid;
   min-height: 280px;
+  flex: 1;
   place-items: center;
   align-content: center;
   gap: 8px;

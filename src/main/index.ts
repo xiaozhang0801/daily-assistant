@@ -14,7 +14,7 @@ function createWindow(): void {
     minHeight: 720,
     show: false,
     autoHideMenuBar: true,
-    backgroundColor: "#f6f4ef",
+    backgroundColor: "#f4f7fb",
     webPreferences: {
       preload: resolvePreloadPath(__dirname),
       sandbox: false,

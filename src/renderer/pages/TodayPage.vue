@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { Activity, Database, FileText, TimerReset } from "lucide-vue-next";
 import type { WorkEvent } from "../../shared/types";
 import PrivacyPanel from "../components/PrivacyPanel.vue";
 import ReportEditor from "../components/ReportEditor.vue";
 import StatusBar from "../components/StatusBar.vue";
 import TimelineList from "../components/TimelineList.vue";
+import { todayRefreshIntervalMs } from "./todayViewModel";
 
 interface TodayState {
   recording: boolean;
@@ -26,6 +27,10 @@ const state = ref<TodayState>({
 const reportDraft = ref(defaultReport);
 const generating = ref(false);
 const copyState = ref("复制");
+const reportStatusMessage = ref("");
+const reportErrorMessage = ref("");
+let refreshTimer: number | undefined;
+let loadingToday = false;
 
 const latestActivity = computed(() => {
   const last = state.value.events.at(-1);
@@ -55,19 +60,27 @@ const overview = computed(() => [
   }
 ]);
 
-async function loadToday(): Promise<void> {
+async function loadToday(preserveReportDraft = false): Promise<void> {
   const dashboard = window.dailyAssistant?.dashboard;
   if (!dashboard) return;
+  if (loadingToday) return;
 
-  const today = await dashboard.getToday();
-  state.value = {
-    recording: today.recording,
-    capturedDurationMinutes: today.capturedDurationMinutes,
-    analyzedEventCount: today.analyzedEventCount,
-    providerStatus: today.providerStatus,
-    events: today.events
-  };
-  reportDraft.value = today.reportDraft || defaultReport;
+  loadingToday = true;
+  try {
+    const today = await dashboard.getToday();
+    state.value = {
+      recording: today.recording,
+      capturedDurationMinutes: today.capturedDurationMinutes,
+      analyzedEventCount: today.analyzedEventCount,
+      providerStatus: today.providerStatus,
+      events: today.events
+    };
+    if (!preserveReportDraft) {
+      reportDraft.value = today.reportDraft || defaultReport;
+    }
+  } finally {
+    loadingToday = false;
+  }
 }
 
 async function pauseCapture(): Promise<void> {
@@ -82,9 +95,19 @@ async function resumeCapture(): Promise<void> {
 
 async function generateReport(): Promise<void> {
   generating.value = true;
+  reportStatusMessage.value = "";
+  reportErrorMessage.value = "";
   try {
     const result = await window.dailyAssistant?.dashboard.generateReport();
     reportDraft.value = result?.content ?? defaultReport;
+    reportStatusMessage.value = `已生成 ${new Date().toLocaleTimeString("zh-CN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false
+    })}`;
+    await loadToday(true);
+  } catch (error) {
+    reportErrorMessage.value = error instanceof Error ? error.message : "生成日报失败";
   } finally {
     generating.value = false;
   }
@@ -98,8 +121,27 @@ async function copyReport(): Promise<void> {
   }, 1200);
 }
 
+function refreshWhenVisible(): void {
+  if (document.visibilityState === "visible") {
+    void loadToday();
+  }
+}
+
 onMounted(() => {
   void loadToday();
+  refreshTimer = window.setInterval(() => {
+    void loadToday();
+  }, todayRefreshIntervalMs);
+  window.addEventListener("focus", refreshWhenVisible);
+  document.addEventListener("visibilitychange", refreshWhenVisible);
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer);
+  }
+  window.removeEventListener("focus", refreshWhenVisible);
+  document.removeEventListener("visibilitychange", refreshWhenVisible);
 });
 </script>
 
@@ -137,6 +179,8 @@ onMounted(() => {
       <ReportEditor
         v-model="reportDraft"
         :generating="generating"
+        :status-message="reportStatusMessage"
+        :error-message="reportErrorMessage"
         @generate="generateReport"
         @copy="copyReport"
       />
@@ -148,9 +192,11 @@ onMounted(() => {
 <style scoped>
 .today-page {
   display: flex;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   flex-direction: column;
   background: transparent;
+  overflow: hidden;
 }
 
 .today-content {
@@ -161,7 +207,7 @@ onMounted(() => {
   grid-template-columns: minmax(300px, 0.88fr) minmax(390px, 1.12fr);
   grid-template-rows: auto minmax(0, 1fr);
   gap: 14px;
-  overflow: auto;
+  overflow: hidden;
   padding: 18px 20px 20px;
 }
 

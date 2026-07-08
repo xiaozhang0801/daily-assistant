@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Component } from "vue";
 import { CalendarDays, FileClock, FileText, History, Settings } from "lucide-vue-next";
+import appLogo from "../assets/app-logo.svg";
 
 defineProps<{ active: string }>();
 
@@ -20,7 +21,7 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
 <template>
   <nav class="sidebar" aria-label="主导航">
     <div class="brand">
-      <span class="brand-mark">日</span>
+      <img class="brand-mark" :src="appLogo" alt="" aria-hidden="true" />
       <div>
         <strong>日报助手</strong>
         <span>Daily Workspace</span>
@@ -71,15 +72,10 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
 }
 
 .brand-mark {
-  display: grid;
   width: 38px;
   height: 38px;
   flex: 0 0 auto;
-  place-items: center;
   border-radius: var(--radius);
-  background: var(--surface-strong);
-  color: white;
-  font-weight: 800;
   box-shadow: 0 8px 18px rgba(17, 24, 39, 0.16);
 }
 
