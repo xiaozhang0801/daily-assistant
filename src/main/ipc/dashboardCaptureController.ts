@@ -12,7 +12,7 @@ interface CaptureSchedulerLike {
 
 interface DashboardCaptureControllerOptions {
   scheduler: CaptureSchedulerLike;
-  captureNow: () => Promise<CaptureRecord[]>;
+  captureNow: () => Promise<CaptureRecord>;
   saveCapture?: (record: CaptureRecord) => void;
   analyzeCapture?: (record: CaptureRecord) => Promise<WorkEvent | null>;
   saveWorkEvent?: (event: WorkEvent) => void | Promise<void>;
@@ -34,20 +34,14 @@ export function createDashboardCaptureController(options: DashboardCaptureContro
     captureInFlight = true;
 
     try {
-      const records = await options.captureNow();
-      let captureRecorded = false;
-      for (const record of records) {
-        options.saveCapture?.(record);
-        if (!captureRecorded) {
-          dashboardState.recordCapture();
-          captureRecorded = true;
-        }
-        const event = await options.analyzeCapture?.(record);
-        if (event) {
-          await options.saveWorkEvent?.(event);
-          dashboardState.recordEvent(event);
-          await options.deleteCapture?.(record);
-        }
+      const record = await options.captureNow();
+      options.saveCapture?.(record);
+      dashboardState.recordCapture();
+      const event = await options.analyzeCapture?.(record);
+      if (event) {
+        await options.saveWorkEvent?.(event);
+        dashboardState.recordEvent(event);
+        await options.deleteCapture?.(record);
       }
     } catch {
       // Keep recording active. A later scheduler tick can retry capture.
