@@ -1,4 +1,5 @@
 import type { WorkEvent } from "../../../shared/types";
+import { formatGitActivityMarkdown, type GitActivitySummary } from "../git/gitActivity";
 
 function timeLabel(iso: string): string {
   return new Date(iso).toLocaleTimeString("zh-CN", {
@@ -21,4 +22,12 @@ export function buildDailyReportFallback(events: WorkEvent[]): string {
   }
 
   return lines.join("\n");
+}
+
+export function buildCodeReportFallback(codeActivity: GitActivitySummary): string {
+  return ["# 今日日报", "", formatGitActivityMarkdown(codeActivity)].join("\n");
+}
+
+export function buildMixedReportFallback(events: WorkEvent[], codeActivity: GitActivitySummary): string {
+  return `${buildDailyReportFallback(events)}\n\n${formatGitActivityMarkdown(codeActivity)}`;
 }

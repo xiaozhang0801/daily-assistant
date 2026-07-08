@@ -1,6 +1,6 @@
 import { readFile, unlink } from "node:fs/promises";
 import { desktopCapturer, ipcMain, nativeImage } from "electron";
-import type { CaptureRecord, WorkEvent, WorkEventDraft } from "../../shared/types";
+import type { CaptureRecord, GenerateReportRequest, ReportGenerationMode, WorkEvent, WorkEventDraft } from "../../shared/types";
 import { dashboardChannels } from "../../shared/types/ipc";
 import { createProviderRegistry } from "../services/ai/providerRegistry";
 import { resolveScreenshotPrompt } from "../services/ai/prompts";
@@ -27,6 +27,15 @@ interface DashboardIpcOptions {
   repositories?: AppRepositories;
   screenshotsDirectory?: string;
   controller?: DashboardController;
+}
+
+function reportGenerationModeFromRequest(request: unknown): ReportGenerationMode {
+  if (!request || typeof request !== "object" || Array.isArray(request)) {
+    return "work";
+  }
+
+  const mode = (request as GenerateReportRequest).mode;
+  return mode === "code" || mode === "mixed" ? mode : "work";
 }
 
 function captureIntervalMs(repositories?: AppRepositories): number {
@@ -146,9 +155,10 @@ export function registerDashboardIpc(options: DashboardIpcOptions = {}): void {
 
   ipcMain.handle(dashboardChannels.pauseCapture, async () => controller.pauseCapture());
   ipcMain.handle(dashboardChannels.resumeCapture, async () => controller.resumeCapture());
-  ipcMain.handle(dashboardChannels.generateReport, async () => {
+  ipcMain.handle(dashboardChannels.generateReport, async (_event, request: GenerateReportRequest | undefined) => {
+    const mode = reportGenerationModeFromRequest(request);
     const result = options.repositories
-      ? await generateDashboardReport({ repositories: options.repositories })
+      ? await generateDashboardReport({ repositories: options.repositories, mode })
       : { content: buildDailyReportFallback((controller.getToday() as { events?: WorkEvent[] }).events ?? []) };
     controller.setReportDraft(result.content, false);
     return result;

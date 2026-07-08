@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
+import type { GenerateReportRequest } from "../shared/types";
 import { dashboardChannels, settingsChannels } from "../shared/types/ipc";
 
 contextBridge.exposeInMainWorld("dailyAssistant", {
@@ -6,7 +7,7 @@ contextBridge.exposeInMainWorld("dailyAssistant", {
     getToday: () => ipcRenderer.invoke(dashboardChannels.getToday),
     pauseCapture: () => ipcRenderer.invoke(dashboardChannels.pauseCapture),
     resumeCapture: () => ipcRenderer.invoke(dashboardChannels.resumeCapture),
-    generateReport: () => ipcRenderer.invoke(dashboardChannels.generateReport),
+    generateReport: (request?: GenerateReportRequest) => ipcRenderer.invoke(dashboardChannels.generateReport, request),
     saveReport: (content: string) => ipcRenderer.invoke(dashboardChannels.saveReport, content),
     getHistory: () => ipcRenderer.invoke(dashboardChannels.getHistory)
   },

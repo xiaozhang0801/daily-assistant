@@ -1,14 +1,25 @@
-import type { AIProviderProfile } from "../../shared/types";
-import { buildDailyReportFallback } from "../services/report/reportGenerator";
+import type { AIProviderProfile, ReportGenerationMode } from "../../shared/types";
+import {
+  buildCodeReportFallback,
+  buildDailyReportFallback,
+  buildMixedReportFallback
+} from "../services/report/reportGenerator";
 import { resolveDailyReportPrompt } from "../services/ai/prompts";
 import { createProviderRegistry } from "../services/ai/providerRegistry";
 import type { AIProvider } from "../services/ai/provider";
 import type { AppRepositories } from "../services/storage/repositories";
+import {
+  collectGitActivity,
+  formatGitActivityMarkdown,
+  type GitActivitySummary
+} from "../services/git/gitActivity";
 
 interface GenerateDashboardReportOptions {
   repositories: AppRepositories;
+  mode?: ReportGenerationMode;
   now?: () => Date;
   createProvider?: (profile: AIProviderProfile, apiKey: string) => AIProvider;
+  collectCodeActivity?: () => Promise<GitActivitySummary>;
 }
 
 interface GenerateDashboardReportResult {
@@ -53,13 +64,67 @@ function usefulReportContent(value: string, eventCount: number): string | null {
   return content;
 }
 
+function normalizeReportGenerationMode(mode: ReportGenerationMode | undefined): ReportGenerationMode {
+  return mode === "code" || mode === "mixed" ? mode : "work";
+}
+
+function gitActivityCount(codeActivity: GitActivitySummary | null): number {
+  if (!codeActivity) return 0;
+  return codeActivity.repositories.reduce(
+    (total, repository) => total + repository.commits.length + repository.changedFiles.length + repository.diffStats.length,
+    0
+  );
+}
+
+function buildUserInstruction(mode: ReportGenerationMode, codeActivity: GitActivitySummary | null): string {
+  if (mode === "work") {
+    return "请根据今天已分析出的工作事件生成日报。";
+  }
+
+  const codeSection = codeActivity ? formatGitActivityMarkdown(codeActivity) : "## 代码工作总结\n\n- 未发现今日 Git 活动。";
+  const modeInstruction =
+    mode === "code"
+      ? "请根据今天的本地 Git 活动生成研发日报，重点总结提交、未提交变更和涉及模块。"
+      : "请结合今天已分析出的工作事件和本地 Git 活动生成日报，避免重复描述。";
+
+  return `${modeInstruction}\n\n以下是安全汇总后的 Git 活动摘要，只能基于摘要写日报，不要假设未列出的代码内容：\n${codeSection}`;
+}
+
+function buildFallbackReport(mode: ReportGenerationMode, events: ReturnType<AppRepositories["workEvents"]["listByDate"]>, codeActivity: GitActivitySummary | null): string {
+  if (mode === "code") {
+    return buildCodeReportFallback(
+      codeActivity ?? {
+        generatedAt: new Date().toISOString(),
+        repositories: []
+      }
+    );
+  }
+
+  if (mode === "mixed") {
+    return buildMixedReportFallback(
+      events,
+      codeActivity ?? {
+        generatedAt: new Date().toISOString(),
+        repositories: []
+      }
+    );
+  }
+
+  return buildDailyReportFallback(events);
+}
+
 export async function generateDashboardReport(
   options: GenerateDashboardReportOptions
 ): Promise<GenerateDashboardReportResult> {
   const now = options.now ?? (() => new Date());
   const generatedAt = now();
   const date = dateKey(generatedAt);
+  const mode = normalizeReportGenerationMode(options.mode);
   const events = options.repositories.workEvents.listByDate(date);
+  const codeActivity =
+    mode === "work"
+      ? null
+      : await (options.collectCodeActivity ?? (() => collectGitActivity({ now: () => generatedAt })))();
   const profile = options.repositories.aiProviders.listEnabled()[0];
   const apiKey = options.repositories.settings.get("ai.apiKey");
   const createProvider = options.createProvider ?? createProviderRegistry().create;
@@ -71,18 +136,18 @@ export async function generateDashboardReport(
       const provider = createProvider(profile, apiKey);
       content = usefulReportContent(
         await provider.generateDailyReport({
-          events,
-          userInstruction: "请根据今天已分析出的工作事件生成日报。",
+          events: mode === "code" ? [] : events,
+          userInstruction: buildUserInstruction(mode, codeActivity),
           prompt: resolveDailyReportPrompt(options.repositories.settings.get("prompt.dailyReport"))
         }),
-        events.length
+        events.length + gitActivityCount(codeActivity)
       );
     } catch {
       content = null;
     }
   }
 
-  const reportContent = content ?? buildDailyReportFallback(events);
+  const reportContent = content ?? buildFallbackReport(mode, events, codeActivity);
 
   return { content: reportContent };
 }

@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { Activity, Database, FileText, TimerReset } from "lucide-vue-next";
-import type { WorkEvent } from "../../shared/types";
+import type { ReportGenerationMode, WorkEvent } from "../../shared/types";
 import PrivacyPanel from "../components/PrivacyPanel.vue";
 import ReportEditor from "../components/ReportEditor.vue";
 import StatusBar from "../components/StatusBar.vue";
 import TimelineList from "../components/TimelineList.vue";
+import { defaultReportGenerationMode } from "./reportModeViewModel";
 import { todayRefreshIntervalMs } from "./todayViewModel";
 
 interface TodayState {
@@ -27,6 +28,7 @@ const state = ref<TodayState>({
   reportSaved: false
 });
 const reportDraft = ref(defaultReport);
+const reportMode = ref<ReportGenerationMode>(defaultReportGenerationMode);
 const generating = ref(false);
 const saving = ref(false);
 const reportDirty = ref(false);
@@ -111,7 +113,7 @@ async function generateReport(): Promise<void> {
   reportStatusMessage.value = "";
   reportErrorMessage.value = "";
   try {
-    const result = await window.dailyAssistant?.dashboard.generateReport();
+    const result = await window.dailyAssistant?.dashboard.generateReport({ mode: reportMode.value });
     reportDraft.value = result?.content ?? defaultReport;
     reportDirty.value = true;
     reportStatusMessage.value = `已生成 ${clockLabel()}，未保存`;
@@ -217,11 +219,13 @@ onBeforeUnmount(() => {
 
       <ReportEditor
         :model-value="reportDraft"
+        :generation-mode="reportMode"
         :generating="generating"
         :saving="saving"
         :status-message="reportStatusMessage"
         :error-message="reportErrorMessage"
         @update:model-value="updateReportDraft"
+        @update:generation-mode="reportMode = $event"
         @generate="generateReport"
         @save="saveReport"
         @copy="copyReport"

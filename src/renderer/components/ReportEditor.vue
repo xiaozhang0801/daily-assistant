@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import { Clipboard, Save, WandSparkles } from "lucide-vue-next";
+import type { ReportGenerationMode } from "../../shared/types";
+import { reportGenerationModeOptions } from "../pages/reportModeViewModel";
 
 defineProps<{
   modelValue: string;
+  generationMode: ReportGenerationMode;
   generating?: boolean;
   saving?: boolean;
   statusMessage?: string;
@@ -11,6 +14,7 @@ defineProps<{
 
 const emit = defineEmits<{
   "update:modelValue": [value: string];
+  "update:generationMode": [mode: ReportGenerationMode];
   generate: [];
   save: [];
   copy: [];
@@ -26,25 +30,39 @@ const emit = defineEmits<{
         <span v-if="errorMessage" class="panel-message error">{{ errorMessage }}</span>
         <span v-else-if="statusMessage" class="panel-message">{{ statusMessage }}</span>
       </div>
-      <div class="actions">
-        <button class="ghost-button" type="button" title="复制日报" @click="emit('copy')">
-          <Clipboard :size="16" :stroke-width="1.9" />
-          <span>复制</span>
-        </button>
-        <button
-          class="ghost-button"
-          type="button"
-          title="保存日报"
-          :disabled="saving || !modelValue.trim()"
-          @click="emit('save')"
-        >
-          <Save :size="16" :stroke-width="1.9" />
-          <span>{{ saving ? "保存中" : "保存" }}</span>
-        </button>
-        <button class="primary-button" type="button" title="生成日报" :disabled="generating" @click="emit('generate')">
-          <WandSparkles :size="16" :stroke-width="1.9" />
-          <span>{{ generating ? "生成中" : "生成" }}</span>
-        </button>
+      <div class="heading-tools">
+        <div class="mode-switch" aria-label="日报生成模式">
+          <button
+            v-for="mode in reportGenerationModeOptions"
+            :key="mode.id"
+            type="button"
+            :title="mode.title"
+            :class="{ active: generationMode === mode.id }"
+            @click="emit('update:generationMode', mode.id)"
+          >
+            {{ mode.label }}
+          </button>
+        </div>
+        <div class="actions">
+          <button class="ghost-button" type="button" title="复制日报" @click="emit('copy')">
+            <Clipboard :size="16" :stroke-width="1.9" />
+            <span>复制</span>
+          </button>
+          <button
+            class="ghost-button"
+            type="button"
+            title="保存日报"
+            :disabled="saving || !modelValue.trim()"
+            @click="emit('save')"
+          >
+            <Save :size="16" :stroke-width="1.9" />
+            <span>{{ saving ? "保存中" : "保存" }}</span>
+          </button>
+          <button class="primary-button" type="button" title="生成日报" :disabled="generating" @click="emit('generate')">
+            <WandSparkles :size="16" :stroke-width="1.9" />
+            <span>{{ generating ? "生成中" : "生成" }}</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -113,10 +131,52 @@ const emit = defineEmits<{
   color: var(--danger);
 }
 
+.heading-tools,
 .actions {
   display: flex;
   align-items: center;
+}
+
+.heading-tools {
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.actions {
   gap: 8px;
+}
+
+.mode-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(3, minmax(44px, 1fr));
+  gap: 3px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--surface-muted);
+}
+
+.mode-switch button {
+  min-height: 30px;
+  border: 0;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 760;
+  transition:
+    background 240ms var(--motion),
+    color 240ms var(--motion),
+    box-shadow 240ms var(--motion);
+}
+
+.mode-switch button.active {
+  background: var(--surface);
+  color: var(--accent-strong);
+  box-shadow:
+    var(--shadow-hairline),
+    inset 0 1px 0 rgba(255, 255, 255, 0.86);
 }
 
 .ghost-button,

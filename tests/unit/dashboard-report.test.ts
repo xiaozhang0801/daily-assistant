@@ -3,6 +3,7 @@ import type { AppRepositories } from "../../src/main/services/storage/repositori
 import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "../../src/main/services/ai/provider";
 import type { AIProviderProfile, WorkEvent, WorkEventDraft } from "../../src/shared/types";
 import { generateDashboardReport, saveDashboardReport } from "../../src/main/ipc/dashboardReport";
+import type { GitActivitySummary } from "../../src/main/services/git/gitActivity";
 
 const workEvent: WorkEvent = {
   id: "event-1",
@@ -108,6 +109,66 @@ describe("dashboard report generation", () => {
 
     expect(result.content).toContain("Implemented realtime dashboard refresh");
     expect(result.content).not.toBe("已生成");
+    expect(repositories.reports.save).not.toHaveBeenCalled();
+  });
+
+  it("builds a code-mode draft from local git activity without saving it", async () => {
+    const repositories = createRepositoryStub();
+    const codeActivity: GitActivitySummary = {
+      generatedAt: "2026-07-08T10:00:00.000Z",
+      repositories: [
+        {
+          path: "C:/project/client-app",
+          name: "client-app",
+          branch: "main",
+          commits: ["feat: add code report mode"],
+          changedFiles: ["M src/main/ipc/dashboardReport.ts"],
+          diffStats: [" src/main/ipc/dashboardReport.ts | 12 +++++++++---"]
+        }
+      ]
+    };
+
+    const result = await generateDashboardReport({
+      repositories,
+      mode: "code",
+      now: () => new Date("2026-07-08T10:00:00.000Z"),
+      collectCodeActivity: async () => codeActivity
+    });
+
+    expect(result.content).toContain("代码工作总结");
+    expect(result.content).toContain("client-app");
+    expect(result.content).toContain("feat: add code report mode");
+    expect(result.content).not.toContain("Implemented realtime dashboard refresh");
+    expect(repositories.reports.save).not.toHaveBeenCalled();
+  });
+
+  it("builds a mixed-mode draft with work events and git activity when AI is unavailable", async () => {
+    const repositories = createRepositoryStub();
+    const codeActivity: GitActivitySummary = {
+      generatedAt: "2026-07-08T10:00:00.000Z",
+      repositories: [
+        {
+          path: "C:/project/client-app",
+          name: "client-app",
+          branch: "main",
+          commits: [],
+          changedFiles: ["M src/renderer/pages/TodayPage.vue"],
+          diffStats: [" src/renderer/pages/TodayPage.vue | 8 ++++++--"]
+        }
+      ]
+    };
+
+    const result = await generateDashboardReport({
+      repositories,
+      mode: "mixed",
+      now: () => new Date("2026-07-08T10:00:00.000Z"),
+      collectCodeActivity: async () => codeActivity
+    });
+
+    expect(result.content).toContain("今日工作总结");
+    expect(result.content).toContain("Implemented realtime dashboard refresh");
+    expect(result.content).toContain("代码工作总结");
+    expect(result.content).toContain("TodayPage.vue");
     expect(repositories.reports.save).not.toHaveBeenCalled();
   });
 

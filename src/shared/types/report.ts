@@ -1,5 +1,10 @@
 export type ReportType = "daily";
 export type WorkEventSource = "ai" | "manual";
+export type ReportGenerationMode = "work" | "code" | "mixed";
+
+export interface GenerateReportRequest {
+  mode?: ReportGenerationMode;
+}
 
 export interface WorkEvent {
   id: string;
