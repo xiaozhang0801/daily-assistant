@@ -3,7 +3,12 @@ import { settingsChannels } from "../../shared/types/ipc";
 import type { AIProviderProfile, AIProviderType } from "../../shared/types";
 import { createMiniMaxProvider } from "../services/ai/minimaxProvider";
 import { createOpenAICompatibleProvider } from "../services/ai/openaiCompatibleProvider";
-import { defaultDailyReportPrompt, defaultScreenshotPrompt } from "../services/ai/prompts";
+import {
+  defaultDailyReportPrompt,
+  defaultScreenshotPrompt,
+  resolveDailyReportPrompt,
+  resolveScreenshotPrompt
+} from "../services/ai/prompts";
 import type { AppRepositories } from "../services/storage/repositories";
 
 interface AISettingsPayload {
@@ -103,8 +108,8 @@ function readSettings(repositories?: AppRepositories): AISettingsPayload {
     modelName: repositories.settings.get("ai.modelName") ?? "",
     customHeaders: parseStringRecordJson(repositories.settings.get("ai.customHeaders")),
     customHeadersText: repositories.settings.get("ai.customHeadersText") ?? "",
-    screenshotPrompt: repositories.settings.get("prompt.screenshot") ?? defaultScreenshotPrompt,
-    dailyReportPrompt: repositories.settings.get("prompt.dailyReport") ?? defaultDailyReportPrompt,
+    screenshotPrompt: resolveScreenshotPrompt(repositories.settings.get("prompt.screenshot")),
+    dailyReportPrompt: resolveDailyReportPrompt(repositories.settings.get("prompt.dailyReport")),
     uploadToAIEnabled: repositories.settings.get("capture.uploadToAIEnabled") === "true",
     captureIntervalMinutes: Number(repositories.settings.get("capture.intervalMinutes") ?? "5")
   };

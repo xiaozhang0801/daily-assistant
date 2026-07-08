@@ -1,7 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { createOpenAICompatibleProvider } from "../../src/main/services/ai/openaiCompatibleProvider";
 import { createProviderRegistry } from "../../src/main/services/ai/providerRegistry";
-import { defaultDailyReportPrompt, defaultScreenshotPrompt } from "../../src/main/services/ai/prompts";
+import {
+  defaultDailyReportPrompt,
+  defaultScreenshotPrompt,
+  legacyDefaultDailyReportPrompt,
+  legacyDefaultScreenshotPrompt,
+  resolveDailyReportPrompt,
+  resolveScreenshotPrompt
+} from "../../src/main/services/ai/prompts";
 
 describe("AI providers", () => {
   it("builds OpenAI-compatible screenshot analysis requests", async () => {
@@ -67,5 +74,15 @@ describe("AI providers", () => {
     expect(defaultScreenshotPrompt).toContain("截图");
     expect(defaultDailyReportPrompt).toContain("中文日报");
     expect(defaultDailyReportPrompt).toContain("Markdown");
+  });
+
+  it("migrates saved legacy English defaults without overwriting custom prompts", () => {
+    expect(resolveScreenshotPrompt(null)).toBe(defaultScreenshotPrompt);
+    expect(resolveScreenshotPrompt(legacyDefaultScreenshotPrompt)).toBe(defaultScreenshotPrompt);
+    expect(resolveScreenshotPrompt("自定义截图提示词")).toBe("自定义截图提示词");
+
+    expect(resolveDailyReportPrompt(null)).toBe(defaultDailyReportPrompt);
+    expect(resolveDailyReportPrompt(legacyDefaultDailyReportPrompt)).toBe(defaultDailyReportPrompt);
+    expect(resolveDailyReportPrompt("自定义日报提示词")).toBe("自定义日报提示词");
   });
 });
