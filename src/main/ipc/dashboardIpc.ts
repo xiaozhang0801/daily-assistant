@@ -4,7 +4,7 @@ import type { CaptureRecord, WorkEvent, WorkEventDraft } from "../../shared/type
 import { dashboardChannels } from "../../shared/types/ipc";
 import { createProviderRegistry } from "../services/ai/providerRegistry";
 import { resolveScreenshotPrompt } from "../services/ai/prompts";
-import { captureScreenshot } from "../services/capture/screenshotCapture";
+import { captureScreenshots } from "../services/capture/screenshotCapture";
 import { createCaptureScheduler } from "../services/capture/captureScheduler";
 import type { AppRepositories } from "../services/storage/repositories";
 import { createDashboardCaptureController } from "./dashboardCaptureController";
@@ -74,17 +74,16 @@ async function deleteScreenshotFile(record: CaptureRecord): Promise<void> {
   }
 }
 
-async function captureDesktopPng(): Promise<Buffer> {
+async function captureDesktopPngs(): Promise<Buffer[]> {
   const sources = await desktopCapturer.getSources({
     types: ["screen"],
     thumbnailSize: { width: 1920, height: 1080 }
   });
-  const firstScreen = sources[0];
-  if (!firstScreen) {
+  if (sources.length === 0) {
     throw new Error("No screen source available.");
   }
 
-  return firstScreen.thumbnail.toPNG();
+  return sources.map((source) => source.thumbnail.toPNG());
 }
 
 function createDefaultDashboardController(options: DashboardIpcOptions): DashboardController {
@@ -106,9 +105,9 @@ function createDefaultDashboardController(options: DashboardIpcOptions): Dashboa
   controller = createDashboardCaptureController({
     scheduler,
     captureNow: () =>
-      captureScreenshot({
+      captureScreenshots({
         storageDirectory: screenshotsDirectory,
-        screenshotPng: captureDesktopPng
+        screenshotPngs: captureDesktopPngs
       }),
     saveCapture: (record) => repositories.captures.save(record),
     analyzeCapture: createScreenshotAnalyzer(repositories),

@@ -42,7 +42,7 @@ describe("dashboard capture controller", () => {
   it("starts scheduling and captures immediately when recording resumes", async () => {
     const scheduler = createSchedulerStub();
     const captureRecord = createCaptureRecord();
-    const captureNow = vi.fn().mockResolvedValue(captureRecord);
+    const captureNow = vi.fn().mockResolvedValue([captureRecord]);
     const saveCapture = vi.fn();
     const controller = createDashboardCaptureController({
       scheduler,
@@ -66,7 +66,7 @@ describe("dashboard capture controller", () => {
     const times = [new Date("2026-07-08T09:00:00.000Z"), new Date("2026-07-08T09:10:00.000Z")];
     const controller = createDashboardCaptureController({
       scheduler,
-      captureNow: vi.fn().mockResolvedValue(createCaptureRecord()),
+      captureNow: vi.fn().mockResolvedValue([createCaptureRecord()]),
       startRecordingSession,
       endRecordingSession,
       now: () => times.shift() ?? new Date("2026-07-08T09:10:00.000Z")
@@ -88,7 +88,7 @@ describe("dashboard capture controller", () => {
     const scheduler = createSchedulerStub();
     const controller = createDashboardCaptureController({
       scheduler,
-      captureNow: vi.fn().mockResolvedValue(createCaptureRecord()),
+      captureNow: vi.fn().mockResolvedValue([createCaptureRecord()]),
       saveCapture: vi.fn()
     });
 
@@ -106,7 +106,7 @@ describe("dashboard capture controller", () => {
     const saveWorkEvent = vi.fn();
     const controller = createDashboardCaptureController({
       scheduler,
-      captureNow: vi.fn().mockResolvedValue(captureRecord),
+      captureNow: vi.fn().mockResolvedValue([captureRecord]),
       saveCapture: vi.fn(),
       analyzeCapture,
       saveWorkEvent
@@ -125,7 +125,7 @@ describe("dashboard capture controller", () => {
     const deleteCapture = vi.fn();
     const controller = createDashboardCaptureController({
       scheduler,
-      captureNow: vi.fn().mockResolvedValue(captureRecord),
+      captureNow: vi.fn().mockResolvedValue([captureRecord]),
       saveCapture: vi.fn(),
       analyzeCapture: vi.fn().mockResolvedValue(workEvent),
       saveWorkEvent: vi.fn(),
@@ -143,7 +143,7 @@ describe("dashboard capture controller", () => {
     const deleteCapture = vi.fn();
     const controller = createDashboardCaptureController({
       scheduler,
-      captureNow: vi.fn().mockResolvedValue(captureRecord),
+      captureNow: vi.fn().mockResolvedValue([captureRecord]),
       saveCapture: vi.fn(),
       analyzeCapture: vi.fn().mockResolvedValue(null),
       saveWorkEvent: vi.fn(),
@@ -153,5 +153,37 @@ describe("dashboard capture controller", () => {
     await controller.resumeCapture();
 
     expect(deleteCapture).not.toHaveBeenCalled();
+  });
+
+  it("saves, analyzes, stores events, and deletes every screen capture in one cycle", async () => {
+    const scheduler = createSchedulerStub();
+    const firstCapture = createCaptureRecord("screen-1");
+    const secondCapture = createCaptureRecord("screen-2");
+    const firstEvent = createWorkEvent(firstCapture.id);
+    const secondEvent = { ...createWorkEvent(secondCapture.id), id: "event-2" };
+    const saveCapture = vi.fn();
+    const analyzeCapture = vi.fn().mockResolvedValueOnce(firstEvent).mockResolvedValueOnce(secondEvent);
+    const saveWorkEvent = vi.fn();
+    const deleteCapture = vi.fn();
+    const controller = createDashboardCaptureController({
+      scheduler,
+      captureNow: vi.fn().mockResolvedValue([firstCapture, secondCapture]),
+      saveCapture,
+      analyzeCapture,
+      saveWorkEvent,
+      deleteCapture
+    });
+
+    await controller.resumeCapture();
+
+    expect(saveCapture).toHaveBeenNthCalledWith(1, firstCapture);
+    expect(saveCapture).toHaveBeenNthCalledWith(2, secondCapture);
+    expect(analyzeCapture).toHaveBeenNthCalledWith(1, firstCapture);
+    expect(analyzeCapture).toHaveBeenNthCalledWith(2, secondCapture);
+    expect(saveWorkEvent).toHaveBeenNthCalledWith(1, firstEvent);
+    expect(saveWorkEvent).toHaveBeenNthCalledWith(2, secondEvent);
+    expect(deleteCapture).toHaveBeenNthCalledWith(1, firstCapture);
+    expect(deleteCapture).toHaveBeenNthCalledWith(2, secondCapture);
+    expect(controller.getToday().capturedDurationMinutes).toBe(1);
   });
 });
