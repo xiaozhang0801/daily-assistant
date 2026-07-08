@@ -39,7 +39,7 @@ describe("git activity", () => {
     expect(repositories).toEqual([repo]);
   });
 
-  it("summarizes today's commits and working tree changes without reading file contents", async () => {
+  it("summarizes today's committed git history without reading working tree changes", async () => {
     const runGit = vi.fn<GitCommandRunner>(async (repoPath, args) => {
       const command = args.join(" ");
       if (command === "rev-parse --abbrev-ref HEAD") {
@@ -47,15 +47,6 @@ describe("git activity", () => {
       }
       if (command.startsWith("log --since=")) {
         return { exitCode: 0, stdout: "feat: add code report mode\nfix: persist report draft\n", stderr: "" };
-      }
-      if (command === "status --short") {
-        return { exitCode: 0, stdout: " M src/main/ipc/dashboardReport.ts\nA  tests/unit/git-activity.test.ts\n", stderr: "" };
-      }
-      if (command === "diff --stat -- .") {
-        return { exitCode: 0, stdout: " src/main/ipc/dashboardReport.ts | 12 +++++++++---\n", stderr: "" };
-      }
-      if (command === "diff --cached --stat -- .") {
-        return { exitCode: 0, stdout: " tests/unit/git-activity.test.ts | 28 ++++++++++++++++++++++++++++\n", stderr: "" };
       }
       throw new Error(`Unexpected git command in ${repoPath}: ${command}`);
     });
@@ -71,13 +62,14 @@ describe("git activity", () => {
       name: "client-app",
       branch: "main",
       commits: ["feat: add code report mode", "fix: persist report draft"],
-      changedFiles: ["M src/main/ipc/dashboardReport.ts", "A tests/unit/git-activity.test.ts"]
+      changedFiles: [],
+      diffStats: []
     });
-    expect(summary.repositories[0].diffStats.join("\n")).toContain("dashboardReport.ts");
-    expect(runGit).not.toHaveBeenCalledWith(expect.any(String), expect.arrayContaining(["show"]), expect.anything());
+    const commands = runGit.mock.calls.map((call) => call[1].join(" "));
+    expect(commands.some((command) => command.includes("status") || command.startsWith("diff"))).toBe(false);
   });
 
-  it("formats git activity as a concise Chinese markdown section", () => {
+  it("formats committed git activity as a concise Chinese markdown section", () => {
     const markdown = formatGitActivityMarkdown({
       generatedAt: "2026-07-08T12:00:00.000Z",
       repositories: [
@@ -95,6 +87,17 @@ describe("git activity", () => {
     expect(markdown).toContain("## 代码工作总结");
     expect(markdown).toContain("client-app");
     expect(markdown).toContain("feat: add code report mode");
-    expect(markdown).toContain("dashboardReport.ts");
+    expect(markdown).not.toContain("当前变更文件");
+    expect(markdown).not.toContain("变更规模");
+    expect(markdown).not.toContain("dashboardReport.ts");
+  });
+
+  it("reports no git activity when there are no committed changes today", () => {
+    const markdown = formatGitActivityMarkdown({
+      generatedAt: "2026-07-08T12:00:00.000Z",
+      repositories: []
+    });
+
+    expect(markdown).toContain("未发现今日 Git 提交。");
   });
 });

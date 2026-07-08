@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { AlertCircle, Bot, KeyRound, Save, SlidersHorizontal, TestTube } from "lucide-vue-next";
+import { AlertCircle, Bot, GitBranch, KeyRound, Save, SlidersHorizontal, TestTube } from "lucide-vue-next";
 import { defaultDailyReportPrompt, defaultScreenshotPrompt } from "../../main/services/ai/prompts";
 import { normalizeAIProviderSettings, toConnectionStatusMessage } from "./settingsViewModel";
 
@@ -14,6 +14,7 @@ interface SettingsState {
   dailyReportPrompt: string;
   uploadToAIEnabled: boolean;
   captureIntervalMinutes: number;
+  gitSearchRoot: string;
 }
 
 const settings = ref<SettingsState>({
@@ -25,7 +26,8 @@ const settings = ref<SettingsState>({
   screenshotPrompt: defaultScreenshotPrompt,
   dailyReportPrompt: defaultDailyReportPrompt,
   uploadToAIEnabled: false,
-  captureIntervalMinutes: 5
+  captureIntervalMinutes: 5,
+  gitSearchRoot: ""
 });
 const saveText = ref("保存");
 const testText = ref("测试连接");
@@ -159,6 +161,18 @@ onMounted(() => {
           <span>允许上传截图给 AI</span>
           <strong>{{ settings.uploadToAIEnabled ? "开启" : "关闭" }}</strong>
         </button>
+      </section>
+
+      <section class="settings-panel">
+        <div class="panel-title">
+          <GitBranch :size="18" :stroke-width="1.9" />
+          <h2>代码日报</h2>
+        </div>
+
+        <label>
+          <span>Git 搜索根目录</span>
+          <input v-model="settings.gitSearchRoot" type="text" placeholder="C:\\project 或 C:\\project\\日报" />
+        </label>
       </section>
 
       <section class="settings-panel wide">

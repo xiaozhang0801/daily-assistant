@@ -22,6 +22,7 @@ interface AISettingsPayload {
   dailyReportPrompt: string;
   uploadToAIEnabled: boolean;
   captureIntervalMinutes: number;
+  gitSearchRoot: string;
 }
 
 const defaultSettings: AISettingsPayload = {
@@ -34,7 +35,8 @@ const defaultSettings: AISettingsPayload = {
   screenshotPrompt: defaultScreenshotPrompt,
   dailyReportPrompt: defaultDailyReportPrompt,
   uploadToAIEnabled: false,
-  captureIntervalMinutes: 5
+  captureIntervalMinutes: 5,
+  gitSearchRoot: ""
 };
 
 let memorySettings = { ...defaultSettings };
@@ -92,7 +94,8 @@ function normalizePayload(value: unknown): AISettingsPayload {
     screenshotPrompt: stringValue(value.screenshotPrompt, defaultScreenshotPrompt),
     dailyReportPrompt: stringValue(value.dailyReportPrompt, defaultDailyReportPrompt),
     uploadToAIEnabled: booleanValue(value.uploadToAIEnabled),
-    captureIntervalMinutes: Math.max(1, Math.min(60, numberValue(value.captureIntervalMinutes)))
+    captureIntervalMinutes: Math.max(1, Math.min(60, numberValue(value.captureIntervalMinutes))),
+    gitSearchRoot: stringValue(value.gitSearchRoot).trim()
   };
 }
 
@@ -111,7 +114,8 @@ function readSettings(repositories?: AppRepositories): AISettingsPayload {
     screenshotPrompt: resolveScreenshotPrompt(repositories.settings.get("prompt.screenshot")),
     dailyReportPrompt: resolveDailyReportPrompt(repositories.settings.get("prompt.dailyReport")),
     uploadToAIEnabled: repositories.settings.get("capture.uploadToAIEnabled") === "true",
-    captureIntervalMinutes: Number(repositories.settings.get("capture.intervalMinutes") ?? "5")
+    captureIntervalMinutes: Number(repositories.settings.get("capture.intervalMinutes") ?? "5"),
+    gitSearchRoot: repositories.settings.get("git.searchRoot") ?? ""
   };
 }
 
@@ -142,6 +146,7 @@ function saveSettings(repositories: AppRepositories | undefined, settings: AISet
   repositories.settings.set("prompt.dailyReport", settings.dailyReportPrompt);
   repositories.settings.set("capture.uploadToAIEnabled", String(settings.uploadToAIEnabled));
   repositories.settings.set("capture.intervalMinutes", String(settings.captureIntervalMinutes));
+  repositories.settings.set("git.searchRoot", settings.gitSearchRoot);
   repositories.aiProviders.save(toProviderProfile(settings));
   repositories.promptTemplates.save({
     id: "default-screenshot-analysis",

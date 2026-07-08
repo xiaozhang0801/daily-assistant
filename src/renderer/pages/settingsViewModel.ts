@@ -11,6 +11,7 @@ export interface AIProviderSettingsInput {
   dailyReportPrompt?: string;
   uploadToAIEnabled?: boolean;
   captureIntervalMinutes?: number;
+  gitSearchRoot?: string;
 }
 
 export interface NormalizedAIProviderSettings {
@@ -24,6 +25,7 @@ export interface NormalizedAIProviderSettings {
   dailyReportPrompt: string;
   uploadToAIEnabled: boolean;
   captureIntervalMinutes: number;
+  gitSearchRoot: string;
 }
 
 export interface ConnectionStatusResult {
@@ -67,6 +69,7 @@ export function normalizeAIProviderSettings(input: AIProviderSettingsInput): {
   const screenshotPrompt = input.screenshotPrompt?.trim() || defaultScreenshotPrompt;
   const dailyReportPrompt = input.dailyReportPrompt?.trim() || defaultDailyReportPrompt;
   const captureIntervalMinutes = Math.max(1, Math.min(60, input.captureIntervalMinutes ?? 5));
+  const gitSearchRoot = input.gitSearchRoot?.trim() ?? "";
 
   if (!apiKey) {
     errors.push("需要填写 API Key");
@@ -91,7 +94,8 @@ export function normalizeAIProviderSettings(input: AIProviderSettingsInput): {
       screenshotPrompt,
       dailyReportPrompt,
       uploadToAIEnabled: Boolean(input.uploadToAIEnabled),
-      captureIntervalMinutes
+      captureIntervalMinutes,
+      gitSearchRoot
     },
     errors
   };

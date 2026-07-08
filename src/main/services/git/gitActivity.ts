@@ -41,8 +41,10 @@ interface SummarizeGitRepositoriesOptions {
   runGit?: GitCommandRunner;
 }
 
-interface CollectGitActivityOptions {
+export interface CollectGitActivityOptions {
   roots?: string[];
+  maxDepth?: number;
+  maxRepositories?: number;
   now?: () => Date;
   runGit?: GitCommandRunner;
 }
@@ -166,15 +168,6 @@ function cleanLines(value: string): string[] {
     .filter(Boolean);
 }
 
-function normalizeStatusLine(line: string): string | null {
-  const raw = line.trimEnd();
-  if (!raw.trim()) return null;
-  const status = raw.slice(0, 2).trim();
-  const file = raw.slice(2).trim();
-  if (!status || !file) return null;
-  return `${status} ${file}`;
-}
-
 async function gitOutput(runGit: GitCommandRunner, repoPath: string, args: string[]): Promise<string> {
   const result = await runGit(repoPath, args, { timeoutMs: 6_000 });
   return result.exitCode === 0 ? result.stdout : "";
@@ -192,16 +185,8 @@ export async function summarizeGitRepositories(options: SummarizeGitRepositories
     const commits = cleanLines(
       await gitOutput(runGit, repoPath, ["log", `--since=${since}`, "--pretty=format:%s", "--no-merges", "--max-count=12"])
     );
-    const changedFiles = cleanLines(await gitOutput(runGit, repoPath, ["status", "--short"]))
-      .map(normalizeStatusLine)
-      .filter((line): line is string => Boolean(line))
-      .slice(0, 24);
-    const diffStats = [
-      ...cleanLines(await gitOutput(runGit, repoPath, ["diff", "--stat", "--", "."])),
-      ...cleanLines(await gitOutput(runGit, repoPath, ["diff", "--cached", "--stat", "--", "."]))
-    ].slice(0, 20);
 
-    if (commits.length === 0 && changedFiles.length === 0 && diffStats.length === 0) {
+    if (commits.length === 0) {
       continue;
     }
 
@@ -210,8 +195,8 @@ export async function summarizeGitRepositories(options: SummarizeGitRepositories
       name: basename(repoPath),
       branch,
       commits,
-      changedFiles,
-      diffStats
+      changedFiles: [],
+      diffStats: []
     });
   }
 
@@ -225,8 +210,8 @@ export async function collectGitActivity(options: CollectGitActivityOptions = {}
   const now = options.now ?? (() => new Date());
   const repositories = await discoverGitRepositories({
     roots: options.roots ?? defaultGitSearchRoots(),
-    maxDepth: 2,
-    maxRepositories: 12
+    maxDepth: options.maxDepth ?? 2,
+    maxRepositories: options.maxRepositories ?? 12
   });
 
   return summarizeGitRepositories({
@@ -238,35 +223,20 @@ export async function collectGitActivity(options: CollectGitActivityOptions = {}
 
 export function formatGitActivityMarkdown(summary: GitActivitySummary): string {
   const lines = ["## 代码工作总结", ""];
+  const repositories = summary.repositories.filter((repository) => repository.commits.length > 0);
 
-  if (summary.repositories.length === 0) {
-    lines.push("- 未发现今日 Git 提交或工作区变更。");
+  if (repositories.length === 0) {
+    lines.push("- 未发现今日 Git 提交。");
     return lines.join("\n");
   }
 
-  for (const repository of summary.repositories) {
+  for (const repository of repositories) {
     const branchLabel = repository.branch ? `（${repository.branch}）` : "";
     lines.push(`### ${repository.name}${branchLabel}`);
 
-    if (repository.commits.length > 0) {
-      lines.push("- 今日提交：");
-      for (const commit of repository.commits) {
-        lines.push(`  - ${commit}`);
-      }
-    }
-
-    if (repository.changedFiles.length > 0) {
-      lines.push("- 当前变更文件：");
-      for (const file of repository.changedFiles) {
-        lines.push(`  - ${file}`);
-      }
-    }
-
-    if (repository.diffStats.length > 0) {
-      lines.push("- 变更规模：");
-      for (const statLine of repository.diffStats.slice(0, 8)) {
-        lines.push(`  - ${statLine}`);
-      }
+    lines.push("- 今日提交：");
+    for (const commit of repository.commits) {
+      lines.push(`  - ${commit}`);
     }
 
     lines.push("");

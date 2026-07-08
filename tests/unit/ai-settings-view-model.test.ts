@@ -25,4 +25,16 @@ describe("AI settings view model", () => {
   it("shows a clear message when Electron bridge returns no connection status", () => {
     expect(toConnectionStatusMessage(undefined)).toBe("没有连接到 Electron 主进程，请在桌面应用窗口中测试连接");
   });
+
+  it("normalizes the configured git search root for code reports", () => {
+    const result = normalizeAIProviderSettings({
+      providerType: "minimax",
+      baseUrl: "",
+      apiKey: "key",
+      modelName: "model",
+      gitSearchRoot: "  C:/project  "
+    });
+
+    expect(result.value.gitSearchRoot).toBe("C:/project");
+  });
 });

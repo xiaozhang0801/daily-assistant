@@ -17,10 +17,14 @@ const workEvent: WorkEvent = {
   source: "ai"
 };
 
-function createRepositoryStub(enabledProvider?: AIProviderProfile): AppRepositories {
+function createRepositoryStub(
+  enabledProvider?: AIProviderProfile,
+  settingOverrides: Record<string, string> = {}
+): AppRepositories {
   const settings = new Map<string, string>([
     ["ai.apiKey", enabledProvider ? "api-key" : ""],
-    ["prompt.dailyReport", "请根据事件生成日报。"]
+    ["prompt.dailyReport", "请根据事件生成日报。"],
+    ...Object.entries(settingOverrides)
   ]);
 
   return {
@@ -122,8 +126,8 @@ describe("dashboard report generation", () => {
           name: "client-app",
           branch: "main",
           commits: ["feat: add code report mode"],
-          changedFiles: ["M src/main/ipc/dashboardReport.ts"],
-          diffStats: [" src/main/ipc/dashboardReport.ts | 12 +++++++++---"]
+          changedFiles: [],
+          diffStats: []
         }
       ]
     };
@@ -140,6 +144,31 @@ describe("dashboard report generation", () => {
     expect(result.content).toContain("feat: add code report mode");
     expect(result.content).not.toContain("Implemented realtime dashboard refresh");
     expect(repositories.reports.save).not.toHaveBeenCalled();
+  });
+
+  it("uses the configured git search root when collecting code activity", async () => {
+    const repositories = createRepositoryStub(undefined, {
+      "git.searchRoot": "C:/project"
+    });
+    const collectCodeActivity = vi.fn(async () => ({
+      generatedAt: "2026-07-08T10:00:00.000Z",
+      repositories: []
+    }));
+
+    await generateDashboardReport({
+      repositories,
+      mode: "code",
+      now: () => new Date("2026-07-08T10:00:00.000Z"),
+      collectCodeActivity
+    });
+
+    expect(collectCodeActivity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        roots: ["C:/project"],
+        maxDepth: 4,
+        maxRepositories: 50
+      })
+    );
   });
 
   it("builds a mixed-mode draft with work events and git activity when AI is unavailable", async () => {
@@ -168,7 +197,8 @@ describe("dashboard report generation", () => {
     expect(result.content).toContain("今日工作总结");
     expect(result.content).toContain("Implemented realtime dashboard refresh");
     expect(result.content).toContain("代码工作总结");
-    expect(result.content).toContain("TodayPage.vue");
+    expect(result.content).toContain("未发现今日 Git 提交。");
+    expect(result.content).not.toContain("TodayPage.vue");
     expect(repositories.reports.save).not.toHaveBeenCalled();
   });
 

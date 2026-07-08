@@ -11,6 +11,7 @@ import type { AppRepositories } from "../services/storage/repositories";
 import {
   collectGitActivity,
   formatGitActivityMarkdown,
+  type CollectGitActivityOptions,
   type GitActivitySummary
 } from "../services/git/gitActivity";
 
@@ -19,7 +20,7 @@ interface GenerateDashboardReportOptions {
   mode?: ReportGenerationMode;
   now?: () => Date;
   createProvider?: (profile: AIProviderProfile, apiKey: string) => AIProvider;
-  collectCodeActivity?: () => Promise<GitActivitySummary>;
+  collectCodeActivity?: (options: CollectGitActivityOptions) => Promise<GitActivitySummary>;
 }
 
 interface GenerateDashboardReportResult {
@@ -70,10 +71,28 @@ function normalizeReportGenerationMode(mode: ReportGenerationMode | undefined): 
 
 function gitActivityCount(codeActivity: GitActivitySummary | null): number {
   if (!codeActivity) return 0;
-  return codeActivity.repositories.reduce(
-    (total, repository) => total + repository.commits.length + repository.changedFiles.length + repository.diffStats.length,
-    0
-  );
+  return codeActivity.repositories.reduce((total, repository) => total + repository.commits.length, 0);
+}
+
+function gitSearchRootFromSettings(repositories: AppRepositories): string | null {
+  const root = repositories.settings.get("git.searchRoot")?.trim() ?? "";
+  return root.length > 0 ? root : null;
+}
+
+function codeActivityOptions(repositories: AppRepositories, generatedAt: Date): CollectGitActivityOptions {
+  const gitSearchRoot = gitSearchRootFromSettings(repositories);
+  if (!gitSearchRoot) {
+    return {
+      now: () => generatedAt
+    };
+  }
+
+  return {
+    roots: [gitSearchRoot],
+    maxDepth: 4,
+    maxRepositories: 50,
+    now: () => generatedAt
+  };
 }
 
 function buildUserInstruction(mode: ReportGenerationMode, codeActivity: GitActivitySummary | null): string {
@@ -81,11 +100,11 @@ function buildUserInstruction(mode: ReportGenerationMode, codeActivity: GitActiv
     return "请根据今天已分析出的工作事件生成日报。";
   }
 
-  const codeSection = codeActivity ? formatGitActivityMarkdown(codeActivity) : "## 代码工作总结\n\n- 未发现今日 Git 活动。";
+  const codeSection = codeActivity ? formatGitActivityMarkdown(codeActivity) : "## 代码工作总结\n\n- 未发现今日 Git 提交。";
   const modeInstruction =
     mode === "code"
-      ? "请根据今天的本地 Git 活动生成研发日报，重点总结提交、未提交变更和涉及模块。"
-      : "请结合今天已分析出的工作事件和本地 Git 活动生成日报，避免重复描述。";
+      ? "请根据今天的本地 Git 已提交记录生成研发日报，重点总结提交内容和涉及模块。"
+      : "请结合今天已分析出的工作事件和本地 Git 已提交记录生成日报，避免重复描述。";
 
   return `${modeInstruction}\n\n以下是安全汇总后的 Git 活动摘要，只能基于摘要写日报，不要假设未列出的代码内容：\n${codeSection}`;
 }
@@ -124,7 +143,7 @@ export async function generateDashboardReport(
   const codeActivity =
     mode === "work"
       ? null
-      : await (options.collectCodeActivity ?? (() => collectGitActivity({ now: () => generatedAt })))();
+      : await (options.collectCodeActivity ?? collectGitActivity)(codeActivityOptions(options.repositories, generatedAt));
   const profile = options.repositories.aiProviders.listEnabled()[0];
   const apiKey = options.repositories.settings.get("ai.apiKey");
   const createProvider = options.createProvider ?? createProviderRegistry().create;
