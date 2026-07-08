@@ -55,8 +55,8 @@ async function copyReport(): Promise<void> {
   display: flex;
   min-height: 100vh;
   flex-direction: column;
-  padding: 24px;
-  background: var(--bg);
+  padding: 24px 26px;
+  background: transparent;
 }
 
 .page-header {
@@ -73,9 +73,10 @@ async function copyReport(): Promise<void> {
 }
 
 .page-header p {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -102,11 +103,17 @@ async function copyReport(): Promise<void> {
   cursor: pointer;
   font-size: 13px;
   font-weight: 750;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .header-actions button:hover {
   border-color: var(--accent);
-  color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .report-layout {
@@ -122,7 +129,7 @@ async function copyReport(): Promise<void> {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hairline);
 }
 
 .report-list {
@@ -139,10 +146,19 @@ async function copyReport(): Promise<void> {
   gap: 10px;
   border-radius: var(--radius);
   padding: 12px;
+  color: var(--ink-soft);
+  transition:
+    background 160ms ease,
+    color 160ms ease;
 }
 
 .report-row:first-child {
   background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.report-row:hover {
+  background: var(--surface-muted);
 }
 
 .report-row strong,
@@ -171,7 +187,9 @@ async function copyReport(): Promise<void> {
   min-height: 520px;
   border: 0;
   padding: 22px;
-  background: #fffefb;
+  background:
+    linear-gradient(180deg, rgba(247, 249, 252, 0.72), rgba(255, 255, 255, 0) 130px),
+    var(--surface);
   color: var(--ink);
   font-family: "Cascadia Mono", Consolas, "Microsoft YaHei UI", monospace;
   font-size: 13px;

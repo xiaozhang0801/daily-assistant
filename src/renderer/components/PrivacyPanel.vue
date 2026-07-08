@@ -51,11 +51,11 @@ defineProps<{
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hairline);
 }
 
 .panel-heading {
-  padding: 18px 18px 14px;
+  padding: 16px 18px 14px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -65,9 +65,10 @@ defineProps<{
 }
 
 .panel-heading p {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -78,7 +79,7 @@ defineProps<{
 
 .privacy-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   padding: 14px;
 }
 
@@ -87,10 +88,10 @@ defineProps<{
   grid-template-columns: 28px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
-  padding: 11px;
-  background: #fbfaf5;
+  padding: 11px 12px;
+  background: var(--surface-muted);
 }
 
 .privacy-item.ok {
@@ -103,7 +104,7 @@ defineProps<{
 
 .privacy-item svg {
   margin-top: 2px;
-  color: var(--accent-strong);
+  color: var(--accent);
 }
 
 .privacy-item strong,

@@ -48,8 +48,8 @@ const days = [
 <style scoped>
 .page {
   min-height: 100vh;
-  padding: 24px;
-  background: var(--bg);
+  padding: 24px 26px;
+  background: transparent;
 }
 
 .page-header {
@@ -62,9 +62,10 @@ const days = [
 }
 
 .page-header p {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -78,7 +79,7 @@ const days = [
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hairline);
 }
 
 .table-head,
@@ -92,7 +93,7 @@ const days = [
 
 .table-head {
   border-bottom: 1px solid var(--line);
-  background: #f5f7f3;
+  background: var(--surface-muted);
   color: var(--ink-muted);
   font-size: 12px;
   font-weight: 800;
@@ -100,6 +101,14 @@ const days = [
 
 .history-row + .history-row {
   border-top: 1px solid var(--line);
+}
+
+.history-row {
+  transition: background 160ms ease;
+}
+
+.history-row:hover {
+  background: var(--surface-muted);
 }
 
 .history-row > div {

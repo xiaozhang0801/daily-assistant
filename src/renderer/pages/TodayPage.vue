@@ -150,11 +150,7 @@ onMounted(() => {
   display: flex;
   min-height: 100vh;
   flex-direction: column;
-  background:
-    linear-gradient(rgba(255, 253, 248, 0.58) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 253, 248, 0.58) 1px, transparent 1px),
-    var(--bg);
-  background-size: 28px 28px;
+  background: transparent;
 }
 
 .today-content {
@@ -164,16 +160,16 @@ onMounted(() => {
   flex: 1;
   grid-template-columns: minmax(300px, 0.88fr) minmax(390px, 1.12fr);
   grid-template-rows: auto minmax(0, 1fr);
-  gap: 16px;
-  overflow: hidden;
-  padding: 18px;
+  gap: 14px;
+  overflow: auto;
+  padding: 18px 20px 20px;
 }
 
 .overview-strip {
   display: grid;
   grid-column: 1 / -1;
   grid-template-columns: repeat(4, minmax(120px, 1fr)) minmax(190px, 1.15fr);
-  gap: 10px;
+  gap: 12px;
 }
 
 .overview-item,
@@ -181,19 +177,26 @@ onMounted(() => {
   min-height: 76px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: rgba(255, 253, 248, 0.88);
-  box-shadow: var(--shadow-soft);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-hairline);
 }
 
 .overview-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 13px;
+  gap: 12px;
+  padding: 13px 14px;
 }
 
 .overview-item svg {
-  color: var(--accent-strong);
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(37, 99, 235, 0.12);
+  border-radius: var(--radius);
+  padding: 8px;
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 
 .overview-item span,
@@ -201,6 +204,7 @@ onMounted(() => {
   display: block;
   color: var(--ink-muted);
   font-size: 12px;
+  font-weight: 650;
 }
 
 .overview-item strong,
@@ -208,6 +212,7 @@ onMounted(() => {
   display: block;
   overflow: hidden;
   margin-top: 4px;
+  color: var(--ink);
   font-size: 18px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -216,7 +221,8 @@ onMounted(() => {
 .activity-note {
   display: grid;
   align-content: center;
-  padding: 13px;
+  padding: 13px 14px;
+  background: var(--surface);
 }
 
 .activity-note strong {
@@ -227,7 +233,7 @@ onMounted(() => {
   display: grid;
   min-height: 0;
   grid-template-rows: minmax(260px, 1fr) auto;
-  gap: 16px;
+  gap: 14px;
 }
 
 .copy-toast {

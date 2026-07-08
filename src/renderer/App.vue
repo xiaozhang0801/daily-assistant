@@ -29,13 +29,17 @@ const activeComponent = computed(() => {
 <style scoped>
 .app-shell {
   display: flex;
+  height: 100vh;
   min-height: 100vh;
-  background: var(--bg);
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(244, 247, 251, 0)),
+    var(--bg);
 }
 
 .main-panel {
   min-width: 0;
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
 }
 </style>

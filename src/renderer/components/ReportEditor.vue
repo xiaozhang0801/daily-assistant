@@ -50,7 +50,7 @@ const emit = defineEmits<{
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hairline);
 }
 
 .panel-heading {
@@ -58,8 +58,9 @@ const emit = defineEmits<{
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 18px;
+  padding: 16px 18px;
   border-bottom: 1px solid var(--line);
+  background: var(--surface);
 }
 
 .panel-heading p,
@@ -68,9 +69,10 @@ const emit = defineEmits<{
 }
 
 .panel-heading p {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -96,11 +98,16 @@ const emit = defineEmits<{
   cursor: pointer;
   font-size: 13px;
   font-weight: 750;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .ghost-button {
   border: 1px solid var(--line);
-  background: transparent;
+  background: var(--surface-muted);
   color: var(--ink-soft);
 }
 
@@ -113,10 +120,12 @@ const emit = defineEmits<{
   border: 1px solid var(--accent);
   background: var(--accent);
   color: white;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
 }
 
 .primary-button:hover:not(:disabled) {
   background: var(--accent-strong);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
 }
 
 .primary-button:disabled {
@@ -129,8 +138,10 @@ const emit = defineEmits<{
   min-height: 360px;
   flex: 1;
   border: 0;
-  padding: 18px;
-  background: #fffefb;
+  padding: 20px;
+  background:
+    linear-gradient(180deg, rgba(247, 249, 252, 0.72), rgba(255, 255, 255, 0) 120px),
+    var(--surface);
   color: var(--ink);
   font-family: "Cascadia Mono", Consolas, "Microsoft YaHei UI", monospace;
   font-size: 13px;

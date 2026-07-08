@@ -44,8 +44,8 @@ const events: WorkEvent[] = [];
   display: flex;
   min-height: 100vh;
   flex-direction: column;
-  padding: 24px;
-  background: var(--bg);
+  padding: 24px 26px;
+  background: transparent;
 }
 
 .page-header {
@@ -62,9 +62,10 @@ const events: WorkEvent[] = [];
 }
 
 .page-header p {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -81,6 +82,7 @@ const events: WorkEvent[] = [];
   color: var(--ink-soft);
   font-size: 13px;
   font-weight: 700;
+  box-shadow: var(--shadow-hairline);
 }
 
 .page-grid {
@@ -96,7 +98,7 @@ const events: WorkEvent[] = [];
   border-radius: var(--radius);
   padding: 18px;
   background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hairline);
 }
 
 .side-panel p,
@@ -105,9 +107,10 @@ const events: WorkEvent[] = [];
 }
 
 .side-panel p {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -126,10 +129,10 @@ const events: WorkEvent[] = [];
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border: 1px solid var(--line);
+  border: 1px solid transparent;
   border-radius: var(--radius);
   padding: 10px 12px;
-  background: #fbfaf5;
+  background: var(--surface-muted);
 }
 
 .category-list span {

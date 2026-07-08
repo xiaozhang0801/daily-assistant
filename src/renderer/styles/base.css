@@ -15,6 +15,8 @@ body {
   background: var(--bg);
   color: var(--ink);
   overflow: hidden;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }
 
 button,
@@ -26,6 +28,7 @@ select {
 
 button {
   color: inherit;
+  user-select: none;
 }
 
 button:focus-visible,
@@ -40,6 +43,19 @@ textarea {
   resize: none;
 }
 
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+input,
+textarea {
+  caret-color: var(--accent);
+}
+
 #app {
   min-height: 100vh;
 }
@@ -52,7 +68,7 @@ textarea {
 ::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 999px;
-  background: rgba(38, 49, 50, 0.28);
+  background: rgba(75, 85, 99, 0.28);
   background-clip: padding-box;
 }
 

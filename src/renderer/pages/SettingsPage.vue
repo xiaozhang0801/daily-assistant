@@ -195,8 +195,8 @@ onMounted(() => {
 <style scoped>
 .page {
   min-height: 100vh;
-  padding: 24px;
-  background: var(--bg);
+  padding: 24px 26px;
+  background: transparent;
 }
 
 .page-header {
@@ -213,9 +213,10 @@ onMounted(() => {
 }
 
 .page-header p {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -241,12 +242,18 @@ onMounted(() => {
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .save-button {
   border: 1px solid var(--accent);
   background: var(--accent);
   color: white;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.18);
 }
 
 .test-button {
@@ -257,7 +264,12 @@ onMounted(() => {
 
 .test-button:hover {
   border-color: var(--accent);
-  color: var(--accent-strong);
+  color: var(--accent);
+}
+
+.save-button:hover {
+  background: var(--accent-strong);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.24);
 }
 
 .settings-grid {
@@ -271,7 +283,7 @@ onMounted(() => {
   border-radius: var(--radius);
   padding: 18px;
   background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hairline);
 }
 
 .settings-panel.wide {
@@ -286,7 +298,7 @@ onMounted(() => {
 }
 
 .panel-title svg {
-  color: var(--accent-strong);
+  color: var(--accent);
 }
 
 .panel-title h2 {
@@ -302,7 +314,7 @@ onMounted(() => {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 4px;
-  background: #f5f7f3;
+  background: var(--surface-muted);
 }
 
 .segmented button {
@@ -312,12 +324,16 @@ onMounted(() => {
   background: transparent;
   cursor: pointer;
   font-weight: 750;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .segmented button.active {
   background: var(--surface);
-  box-shadow: 0 2px 8px rgba(23, 33, 36, 0.08);
-  color: var(--accent-strong);
+  box-shadow: var(--shadow-hairline);
+  color: var(--accent);
 }
 
 label {
@@ -337,8 +353,19 @@ textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  background: #fffefb;
+  background: var(--surface-muted);
   color: var(--ink);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
+}
+
+input:focus,
+textarea:focus {
+  border-color: rgba(37, 99, 235, 0.45);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
 input {
@@ -398,8 +425,16 @@ textarea {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   padding: 12px;
-  background: #fbfaf5;
+  background: var(--surface-muted);
   cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.toggle-row:hover {
+  border-color: var(--line-strong);
+  background: var(--surface);
 }
 
 .toggle-row span {
@@ -411,7 +446,7 @@ textarea {
   border-radius: 999px;
   padding: 4px 9px;
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 12px;
 }
 </style>

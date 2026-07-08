@@ -23,7 +23,7 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
       <span class="brand-mark">日</span>
       <div>
         <strong>日报助手</strong>
-        <span>Local Desk</span>
+        <span>Daily Workspace</span>
       </div>
     </div>
 
@@ -52,31 +52,35 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
 <style scoped>
 .sidebar {
   display: flex;
-  width: 188px;
+  width: 204px;
+  height: 100vh;
   min-height: 100vh;
   flex-direction: column;
-  padding: 18px 12px;
-  background: var(--surface-strong);
-  color: #f7f3e9;
+  border-right: 1px solid var(--line);
+  padding: 18px 14px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  box-shadow: 1px 0 0 rgba(255, 255, 255, 0.7) inset;
 }
 
 .brand {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 4px 6px 22px;
+  padding: 4px 6px 24px;
 }
 
 .brand-mark {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   flex: 0 0 auto;
   place-items: center;
   border-radius: var(--radius);
-  background: var(--accent);
+  background: var(--surface-strong);
   color: white;
   font-weight: 800;
+  box-shadow: 0 8px 18px rgba(17, 24, 39, 0.16);
 }
 
 .brand strong,
@@ -86,17 +90,18 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
 
 .brand strong {
   font-size: 15px;
+  letter-spacing: 0;
 }
 
 .brand span {
   margin-top: 2px;
-  color: rgba(247, 243, 233, 0.56);
+  color: var(--ink-muted);
   font-size: 11px;
 }
 
 .nav-list {
   display: grid;
-  gap: 5px;
+  gap: 6px;
 }
 
 .nav-item {
@@ -108,19 +113,26 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
   border-radius: var(--radius);
   padding: 10px 11px;
   background: transparent;
-  color: rgba(247, 243, 233, 0.72);
+  color: var(--ink-soft);
   cursor: pointer;
   text-align: left;
+  transition:
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.nav-item:hover,
-.nav-item.active {
-  background: rgba(255, 253, 248, 0.11);
-  color: #fffdf8;
+.nav-item:hover {
+  background: var(--surface-muted);
+  color: var(--ink);
 }
 
 .nav-item.active {
-  box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  box-shadow:
+    inset 3px 0 0 var(--accent),
+    var(--shadow-hairline);
 }
 
 .nav-item span {
@@ -136,10 +148,11 @@ const items: Array<{ id: string; label: string; icon: Component }> = [
   align-items: center;
   gap: 8px;
   margin-top: auto;
-  padding: 10px 8px;
-  border: 1px solid rgba(255, 253, 248, 0.1);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
-  color: rgba(247, 243, 233, 0.68);
+  padding: 10px 9px;
+  background: var(--surface-muted);
+  color: var(--ink-soft);
   font-size: 12px;
 }
 

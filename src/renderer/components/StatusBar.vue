@@ -29,13 +29,13 @@ const providerText = computed(() => {
     </div>
 
     <div class="metrics" aria-label="今日概览">
-      <span class="metric">
+      <span class="metric state-metric" :class="{ active: recording }">
         <Radio :size="16" :stroke-width="1.9" />
         {{ recording ? "记录中" : "已暂停" }}
       </span>
       <span class="metric">{{ duration }} 分钟</span>
       <span class="metric">{{ eventCount }} 个事件</span>
-      <span class="metric">
+      <span class="metric provider-metric" :class="{ ready: providerStatus === 'ready', warning: providerStatus === 'not_configured' }">
         <Bot :size="16" :stroke-width="1.9" />
         {{ providerText }}
       </span>
@@ -54,25 +54,27 @@ const providerText = computed(() => {
 <style scoped>
 .status-bar {
   display: flex;
-  min-height: 92px;
+  min-height: 88px;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  padding: 20px 28px;
+  padding: 18px 26px;
   border-bottom: 1px solid var(--line);
-  background: rgba(255, 253, 248, 0.88);
+  background: rgba(255, 255, 255, 0.78);
 }
 
 .title-block p {
   margin: 0 0 5px;
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .title-block h1 {
   margin: 0;
-  font-size: 24px;
+  color: var(--ink);
+  font-size: 23px;
   letter-spacing: 0;
 }
 
@@ -84,33 +86,58 @@ const providerText = computed(() => {
 
 .metric {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 36px;
   align-items: center;
   gap: 6px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 7px 10px;
-  background: var(--surface);
+  padding: 7px 11px;
+  background: rgba(255, 255, 255, 0.74);
   color: var(--ink-soft);
   font-size: 13px;
+  font-weight: 650;
   white-space: nowrap;
+  box-shadow: var(--shadow-hairline);
+}
+
+.state-metric.active {
+  border-color: rgba(22, 133, 95, 0.24);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.provider-metric.ready {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.provider-metric.warning {
+  border-color: rgba(183, 121, 31, 0.22);
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .control-button {
   display: inline-flex;
-  min-height: 36px;
+  min-height: 38px;
   align-items: center;
   gap: 6px;
   border: 1px solid var(--accent);
   border-radius: var(--radius);
-  padding: 8px 12px;
+  padding: 8px 13px;
   background: var(--accent);
   color: white;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 760;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.2);
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .control-button:hover {
   background: var(--accent-strong);
+  box-shadow: 0 12px 26px rgba(37, 99, 235, 0.26);
 }
 </style>

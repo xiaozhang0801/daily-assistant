@@ -67,7 +67,7 @@ function timeLabel(iso: string): string {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--surface);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-hairline);
 }
 
 .panel-heading {
@@ -75,7 +75,7 @@ function timeLabel(iso: string): string {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 18px 18px 14px;
+  padding: 16px 18px 14px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -85,9 +85,10 @@ function timeLabel(iso: string): string {
 }
 
 .panel-heading p {
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 11px;
   font-weight: 800;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
@@ -100,7 +101,7 @@ function timeLabel(iso: string): string {
   border-radius: 999px;
   padding: 5px 9px;
   background: var(--accent-soft);
-  color: var(--accent-strong);
+  color: var(--accent);
   font-size: 12px;
   font-weight: 750;
 }
@@ -116,7 +117,12 @@ function timeLabel(iso: string): string {
   display: grid;
   grid-template-columns: 72px minmax(0, 1fr);
   gap: 14px;
-  padding: 14px 18px;
+  padding: 15px 18px;
+  transition: background 160ms ease;
+}
+
+.event-row:hover {
+  background: var(--surface-muted);
 }
 
 .event-row + .event-row {
@@ -156,7 +162,7 @@ function timeLabel(iso: string): string {
   flex: 0 0 auto;
   border-radius: 999px;
   padding: 3px 8px;
-  background: var(--surface-muted);
+  background: var(--teal-soft);
   color: var(--ink-soft);
   font-size: 11px;
 }
@@ -185,6 +191,7 @@ function timeLabel(iso: string): string {
   padding: 24px;
   color: var(--ink-muted);
   text-align: center;
+  background: var(--surface-muted);
 }
 
 .empty-state h3,
