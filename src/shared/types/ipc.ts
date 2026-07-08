@@ -4,6 +4,8 @@ export const dashboardChannels = {
   resumeCapture: "dashboard:resumeCapture",
   generateReport: "dashboard:generateReport",
   saveReport: "dashboard:saveReport",
+  generateWeeklyReport: "dashboard:generateWeeklyReport",
+  saveWeeklyReport: "dashboard:saveWeeklyReport",
   getHistory: "dashboard:getHistory"
 } as const;
 

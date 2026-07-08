@@ -267,6 +267,40 @@ export function createRepositories(db: AppDatabase) {
         `).get(date);
 
         return row ?? null;
+      },
+      getByDateAndType(date: string, type: ReportType): DailyReport | null {
+        const row = db.prepare<[string, ReportType], DailyReportRow>(`
+          SELECT
+            id,
+            date,
+            type,
+            content,
+            generated_at AS generatedAt,
+            updated_at AS updatedAt,
+            provider_id AS providerId,
+            model_name AS modelName
+          FROM reports
+          WHERE date = ? AND type = ?
+        `).get(date, type);
+
+        return row ?? null;
+      },
+      listDailyByDateRange(startDate: string, endDate: string): DailyReport[] {
+        return db.prepare<[string, string], DailyReportRow>(`
+          SELECT
+            id,
+            date,
+            type,
+            content,
+            generated_at AS generatedAt,
+            updated_at AS updatedAt,
+            provider_id AS providerId,
+            model_name AS modelName
+          FROM reports
+          WHERE type = 'daily'
+            AND date BETWEEN ? AND ?
+          ORDER BY date ASC
+        `).all(startDate, endDate);
       }
     },
     aiProviders: {

@@ -1,8 +1,15 @@
-import type { AIProviderProfile, ReportGenerationMode } from "../../shared/types";
+import type {
+  AIProviderProfile,
+  DailyReport,
+  ReportGenerationMode,
+  WeeklyReportGenerationResult,
+  WeeklyReportSaveResult
+} from "../../shared/types";
 import {
   buildCodeReportFallback,
   buildDailyReportFallback,
-  buildMixedReportFallback
+  buildMixedReportFallback,
+  buildWeeklyReportFallback
 } from "../services/report/reportGenerator";
 import { resolveDailyReportPrompt } from "../services/ai/prompts";
 import { createProviderRegistry } from "../services/ai/providerRegistry";
@@ -40,8 +47,56 @@ interface SaveDashboardReportResult {
   date: string;
 }
 
+interface GenerateWeeklyReportOptions {
+  repositories: AppRepositories;
+  now?: () => Date;
+  createProvider?: (profile: AIProviderProfile, apiKey: string) => AIProvider;
+}
+
+interface SaveWeeklyReportOptions {
+  repositories: AppRepositories;
+  content: string;
+  now?: () => Date;
+}
+
+interface WeekRange {
+  weekKey: string;
+  startDate: string;
+  endDate: string;
+}
+
 function dateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function utcDateKey(year: number, month: number, day: number): string {
+  return new Date(Date.UTC(year, month, day)).toISOString().slice(0, 10);
+}
+
+function isoWeekNumber(date: Date): { weekYear: number; week: number } {
+  const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
+  const weekYear = utcDate.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(weekYear, 0, 1));
+  const week = Math.ceil(((utcDate.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+  return { weekYear, week };
+}
+
+function weekRangeFor(date: Date): WeekRange {
+  const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = utcDate.getUTCDay() || 7;
+  const monday = new Date(utcDate);
+  monday.setUTCDate(utcDate.getUTCDate() - day + 1);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const { weekYear, week } = isoWeekNumber(utcDate);
+
+  return {
+    weekKey: `${weekYear}-W${String(week).padStart(2, "0")}`,
+    startDate: utcDateKey(monday.getUTCFullYear(), monday.getUTCMonth(), monday.getUTCDate()),
+    endDate: utcDateKey(sunday.getUTCFullYear(), sunday.getUTCMonth(), sunday.getUTCDate())
+  };
 }
 
 function nonEmptyContent(value: string): string | null {
@@ -114,6 +169,22 @@ function buildUserInstruction(mode: ReportGenerationMode, codeActivity: GitActiv
       : "请结合今天已分析出的工作事件和本地 Git 已提交记录生成日报，避免重复描述。";
 
   return `${modeInstruction}\n\n以下是安全汇总后的 Git 活动摘要，只能基于摘要写日报，不要假设未列出的代码内容：\n${codeSection}`;
+}
+
+function buildWeeklyUserInstruction(range: WeekRange, dailyReports: DailyReport[]): string {
+  const reportSection =
+    dailyReports.length > 0
+      ? dailyReports.map((report) => `### ${report.date}\n${report.content.trim()}`).join("\n\n")
+      : "本周没有已保存日报。";
+
+  return [
+    `请根据日报库中 ${range.startDate} 到 ${range.endDate} 的已保存日报生成本周周报。`,
+    "只能使用下面的日报内容，不要读取或推测时间线、截图、未保存草稿或其他数据。",
+    "请合并重复事项，突出本周完成内容、进展、问题和下周计划。",
+    "",
+    "日报库内容：",
+    reportSection
+  ].join("\n");
 }
 
 function buildFallbackReport(mode: ReportGenerationMode, events: ReturnType<AppRepositories["workEvents"]["listByDate"]>, codeActivity: GitActivitySummary | null): string {
@@ -201,5 +272,65 @@ export function saveDashboardReport(options: SaveDashboardReportOptions): SaveDa
     ok: true,
     content: options.content,
     date
+  };
+}
+
+export async function generateWeeklyReport(
+  options: GenerateWeeklyReportOptions
+): Promise<WeeklyReportGenerationResult> {
+  const now = options.now ?? (() => new Date());
+  const generatedAt = now();
+  const range = weekRangeFor(generatedAt);
+  const dailyReports = options.repositories.reports.listDailyByDateRange(range.startDate, range.endDate);
+  const profile = options.repositories.aiProviders.listEnabled()[0];
+  const apiKey = options.repositories.settings.get("ai.apiKey");
+  const createProvider = options.createProvider ?? createProviderRegistry().create;
+  let content: string | null = null;
+
+  if (dailyReports.length > 0 && profile && apiKey && profile.modelName) {
+    try {
+      const provider = createProvider(profile, apiKey);
+      content = usefulReportContent(
+        await provider.generateDailyReport({
+          events: [],
+          userInstruction: buildWeeklyUserInstruction(range, dailyReports),
+          prompt: resolveDailyReportPrompt(options.repositories.settings.get("prompt.dailyReport"))
+        }),
+        dailyReports.length
+      );
+    } catch {
+      content = null;
+    }
+  }
+
+  return {
+    ...range,
+    content: content ?? buildWeeklyReportFallback(dailyReports, range.startDate, range.endDate),
+    sourceReportCount: dailyReports.length
+  };
+}
+
+export function saveWeeklyReport(options: SaveWeeklyReportOptions): WeeklyReportSaveResult {
+  const now = options.now ?? (() => new Date());
+  const savedAt = now();
+  const range = weekRangeFor(savedAt);
+  const timestamp = savedAt.toISOString();
+  const existingReport = options.repositories.reports.getByDateAndType(range.weekKey, "weekly");
+
+  options.repositories.reports.save({
+    id: `weekly-${range.weekKey}`,
+    date: range.weekKey,
+    type: "weekly",
+    content: options.content,
+    generatedAt: existingReport?.generatedAt ?? timestamp,
+    updatedAt: timestamp,
+    providerId: existingReport?.providerId ?? "manual",
+    modelName: existingReport?.modelName ?? "manual"
+  });
+
+  return {
+    ok: true,
+    content: options.content,
+    ...range
   };
 }

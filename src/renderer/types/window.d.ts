@@ -17,6 +17,8 @@ declare global {
         resumeCapture: () => Promise<{ ok: boolean; recording: boolean }>;
         generateReport: (request?: import("../../shared/types").GenerateReportRequest) => Promise<{ content: string }>;
         saveReport: (content: string) => Promise<{ ok: true; content: string; date: string }>;
+        generateWeeklyReport: () => Promise<import("../../shared/types").WeeklyReportGenerationResult>;
+        saveWeeklyReport: (content: string) => Promise<import("../../shared/types").WeeklyReportSaveResult>;
         getHistory: () => Promise<import("../../shared/types").DailyHistoryDay[]>;
       };
       settings: {

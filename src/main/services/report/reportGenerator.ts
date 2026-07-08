@@ -1,4 +1,5 @@
 import type { WorkEvent } from "../../../shared/types";
+import type { DailyReport } from "../../../shared/types";
 import { formatGitActivityMarkdown, type GitActivitySummary } from "../git/gitActivity";
 
 function timeLabel(iso: string): string {
@@ -30,4 +31,21 @@ export function buildCodeReportFallback(codeActivity: GitActivitySummary): strin
 
 export function buildMixedReportFallback(events: WorkEvent[], codeActivity: GitActivitySummary): string {
   return `${buildDailyReportFallback(events)}\n\n${formatGitActivityMarkdown(codeActivity)}`;
+}
+
+export function buildWeeklyReportFallback(dailyReports: DailyReport[], startDate: string, endDate: string): string {
+  const lines = ["# 本周周报", "", `## 周报总结（${startDate} - ${endDate}）`, ""];
+
+  if (dailyReports.length === 0) {
+    lines.push("- 本周暂无已保存日报，无法生成周报。");
+    return lines.join("\n");
+  }
+
+  for (const report of dailyReports) {
+    lines.push(`### ${report.date}`);
+    lines.push(report.content.trim());
+    lines.push("");
+  }
+
+  return lines.join("\n").trimEnd();
 }

@@ -2,7 +2,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { AppRepositories } from "../../src/main/services/storage/repositories";
 import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "../../src/main/services/ai/provider";
 import type { AIProviderProfile, WorkEvent, WorkEventDraft } from "../../src/shared/types";
-import { generateDashboardReport, saveDashboardReport } from "../../src/main/ipc/dashboardReport";
+import {
+  generateDashboardReport,
+  generateWeeklyReport,
+  saveDashboardReport,
+  saveWeeklyReport
+} from "../../src/main/ipc/dashboardReport";
 import type { GitActivitySummary } from "../../src/main/services/git/gitActivity";
 
 const workEvent: WorkEvent = {
@@ -39,7 +44,9 @@ function createRepositoryStub(
     },
     reports: {
       save: vi.fn(),
-      getByDate: vi.fn(() => null)
+      getByDate: vi.fn(() => null),
+      getByDateAndType: vi.fn(() => null),
+      listDailyByDateRange: vi.fn(() => [])
     },
     aiProviders: {
       save: vi.fn(),
@@ -290,6 +297,131 @@ describe("dashboard report generation", () => {
       updatedAt: "2026-07-08T18:00:00.000Z",
       providerId: "primary",
       modelName: "MiniMax-M3"
+    });
+  });
+
+  it("builds a weekly draft from saved daily reports without reading timeline events", async () => {
+    const repositories = createRepositoryStub();
+    vi.mocked(repositories.reports.listDailyByDateRange).mockReturnValue([
+      {
+        id: "daily-2026-07-06",
+        date: "2026-07-06",
+        type: "daily",
+        content: "# 7 月 6 日日报\n\n- 完成日报助手时间线优化。",
+        generatedAt: "2026-07-06T18:00:00.000Z",
+        updatedAt: "2026-07-06T18:00:00.000Z",
+        providerId: "manual",
+        modelName: "manual"
+      },
+      {
+        id: "daily-2026-07-07",
+        date: "2026-07-07",
+        type: "daily",
+        content: "# 7 月 7 日日报\n\n- 完成代码日报 Git 提交统计。",
+        generatedAt: "2026-07-07T18:00:00.000Z",
+        updatedAt: "2026-07-07T18:00:00.000Z",
+        providerId: "manual",
+        modelName: "manual"
+      }
+    ]);
+
+    const result = await generateWeeklyReport({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z")
+    });
+
+    expect(repositories.reports.listDailyByDateRange).toHaveBeenCalledWith("2026-07-06", "2026-07-12");
+    expect(repositories.workEvents.listByDate).not.toHaveBeenCalled();
+    expect(result).toMatchObject({
+      weekKey: "2026-W28",
+      startDate: "2026-07-06",
+      endDate: "2026-07-12",
+      sourceReportCount: 2
+    });
+    expect(result.content).toContain("周报总结");
+    expect(result.content).toContain("完成日报助手时间线优化");
+    expect(result.content).toContain("完成代码日报 Git 提交统计");
+  });
+
+  it("passes saved daily reports into AI weekly report generation", async () => {
+    const profile: AIProviderProfile = {
+      id: "primary",
+      name: "MiniMax",
+      type: "minimax",
+      baseUrl: null,
+      apiKeyRef: "settings:ai.apiKey",
+      modelName: "MiniMax-M3",
+      customHeaders: {},
+      enabled: true
+    };
+    const repositories = createRepositoryStub(profile);
+    vi.mocked(repositories.reports.listDailyByDateRange).mockReturnValue([
+      {
+        id: "daily-2026-07-06",
+        date: "2026-07-06",
+        type: "daily",
+        content: "# 日报\n\n- 推进日报库周报功能。",
+        generatedAt: "2026-07-06T18:00:00.000Z",
+        updatedAt: "2026-07-06T18:00:00.000Z",
+        providerId: "manual",
+        modelName: "manual"
+      }
+    ]);
+    const aiInputs: DailyReportInput[] = [];
+
+    const result = await generateWeeklyReport({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z"),
+      createProvider: () => ({
+        ...createProviderStub("# 本周周报\n\n- AI 生成内容"),
+        generateDailyReport: async (input: DailyReportInput) => {
+          aiInputs.push(input);
+          return "# 本周周报\n\n- AI 生成内容";
+        }
+      })
+    });
+
+    expect(result.content).toContain("AI 生成内容");
+    expect(aiInputs[0].events).toEqual([]);
+    expect(aiInputs[0].userInstruction).toContain("2026-07-06");
+    expect(aiInputs[0].userInstruction).toContain("推进日报库周报功能");
+  });
+
+  it("saves the weekly draft and overwrites the existing report for the same week", () => {
+    const repositories = createRepositoryStub();
+    vi.mocked(repositories.reports.getByDateAndType).mockReturnValue({
+      id: "weekly-2026-W28",
+      date: "2026-W28",
+      type: "weekly",
+      content: "旧周报",
+      generatedAt: "2026-07-08T09:00:00.000Z",
+      updatedAt: "2026-07-08T09:00:00.000Z",
+      providerId: "manual",
+      modelName: "manual"
+    });
+
+    const result = saveWeeklyReport({
+      repositories,
+      content: "# 本周周报\n\n- 新保存的周报。",
+      now: () => new Date("2026-07-08T18:00:00.000Z")
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      content: "# 本周周报\n\n- 新保存的周报。",
+      weekKey: "2026-W28",
+      startDate: "2026-07-06",
+      endDate: "2026-07-12"
+    });
+    expect(repositories.reports.save).toHaveBeenCalledWith({
+      id: "weekly-2026-W28",
+      date: "2026-W28",
+      type: "weekly",
+      content: "# 本周周报\n\n- 新保存的周报。",
+      generatedAt: "2026-07-08T09:00:00.000Z",
+      updatedAt: "2026-07-08T18:00:00.000Z",
+      providerId: "manual",
+      modelName: "manual"
     });
   });
 });

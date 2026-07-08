@@ -1,4 +1,4 @@
-export type ReportType = "daily";
+export type ReportType = "daily" | "weekly";
 export type WorkEventSource = "ai" | "manual";
 export type ReportGenerationMode = "work" | "code" | "mixed";
 
@@ -37,4 +37,20 @@ export interface DailyHistoryDay {
   duration: string;
   events: number;
   report: DailyHistoryReportStatus;
+}
+
+export interface WeeklyReportGenerationResult {
+  content: string;
+  weekKey: string;
+  startDate: string;
+  endDate: string;
+  sourceReportCount: number;
+}
+
+export interface WeeklyReportSaveResult {
+  ok: true;
+  content: string;
+  weekKey: string;
+  startDate: string;
+  endDate: string;
 }

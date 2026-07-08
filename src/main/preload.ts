@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld("dailyAssistant", {
     resumeCapture: () => ipcRenderer.invoke(dashboardChannels.resumeCapture),
     generateReport: (request?: GenerateReportRequest) => ipcRenderer.invoke(dashboardChannels.generateReport, request),
     saveReport: (content: string) => ipcRenderer.invoke(dashboardChannels.saveReport, content),
+    generateWeeklyReport: () => ipcRenderer.invoke(dashboardChannels.generateWeeklyReport),
+    saveWeeklyReport: (content: string) => ipcRenderer.invoke(dashboardChannels.saveWeeklyReport, content),
     getHistory: () => ipcRenderer.invoke(dashboardChannels.getHistory)
   },
   settings: {

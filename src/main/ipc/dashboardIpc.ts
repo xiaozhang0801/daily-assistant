@@ -10,11 +10,11 @@ import { createCaptureScheduler } from "../services/capture/captureScheduler";
 import type { AppRepositories } from "../services/storage/repositories";
 import { createDashboardCaptureController } from "./dashboardCaptureController";
 import { buildDashboardHistory } from "./dashboardHistory";
-import { generateDashboardReport, saveDashboardReport } from "./dashboardReport";
+import { generateDashboardReport, generateWeeklyReport, saveDashboardReport, saveWeeklyReport } from "./dashboardReport";
 import { createDashboardState } from "./dashboardState";
 import { createDashboardSummaryProvider } from "./dashboardSummary";
 import { createWorkEventFromCapture } from "./workEventFactory";
-import { buildDailyReportFallback } from "../services/report/reportGenerator";
+import { buildDailyReportFallback, buildWeeklyReportFallback } from "../services/report/reportGenerator";
 
 interface DashboardController {
   getToday(): unknown;
@@ -42,6 +42,26 @@ function captureIntervalMs(repositories?: AppRepositories): number {
   const minutes = Number(repositories?.settings.get("capture.intervalMinutes") ?? "5");
   const safeMinutes = Number.isFinite(minutes) ? Math.max(1, Math.min(60, minutes)) : 5;
   return safeMinutes * 60_000;
+}
+
+function weekRangeFor(date: Date): { weekKey: string; startDate: string; endDate: string } {
+  const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = utcDate.getUTCDay() || 7;
+  const monday = new Date(utcDate);
+  monday.setUTCDate(utcDate.getUTCDate() - day + 1);
+  const sunday = new Date(monday);
+  sunday.setUTCDate(monday.getUTCDate() + 6);
+  const thursday = new Date(utcDate);
+  thursday.setUTCDate(utcDate.getUTCDate() + 4 - day);
+  const weekYear = thursday.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(weekYear, 0, 1));
+  const week = Math.ceil(((thursday.getTime() - yearStart.getTime()) / 86_400_000 + 1) / 7);
+
+  return {
+    weekKey: `${weekYear}-W${String(week).padStart(2, "0")}`,
+    startDate: monday.toISOString().slice(0, 10),
+    endDate: sunday.toISOString().slice(0, 10)
+  };
 }
 
 function createScreenshotAnalyzer(repositories: AppRepositories) {
@@ -170,6 +190,30 @@ export function registerDashboardIpc(options: DashboardIpcOptions = {}): void {
       : { ok: true as const, content: reportContent, date: new Date().toISOString().slice(0, 10) };
     controller.setReportDraft(result.content, true);
     return result;
+  });
+  ipcMain.handle(dashboardChannels.generateWeeklyReport, async () => {
+    if (options.repositories) {
+      return generateWeeklyReport({ repositories: options.repositories });
+    }
+
+    const range = weekRangeFor(new Date());
+    return {
+      ...range,
+      content: buildWeeklyReportFallback([], range.startDate, range.endDate),
+      sourceReportCount: 0
+    };
+  });
+  ipcMain.handle(dashboardChannels.saveWeeklyReport, async (_event, content: string) => {
+    const reportContent = typeof content === "string" ? content : "";
+    if (options.repositories) {
+      return saveWeeklyReport({ repositories: options.repositories, content: reportContent });
+    }
+
+    return {
+      ok: true as const,
+      content: reportContent,
+      ...weekRangeFor(new Date())
+    };
   });
   ipcMain.handle(dashboardChannels.getHistory, async () =>
     options.repositories ? buildDashboardHistory({ repositories: options.repositories }) : []

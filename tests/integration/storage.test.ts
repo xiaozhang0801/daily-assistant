@@ -57,6 +57,26 @@ describe("storage repositories", () => {
       providerId: "provider-1",
       modelName: "model"
     });
+    repos.reports.save({
+      id: "report-2",
+      date: "2026-07-08",
+      type: "daily",
+      content: "Built weekly report",
+      generatedAt: "2026-07-08T18:00:00.000Z",
+      updatedAt: "2026-07-08T18:00:00.000Z",
+      providerId: "provider-1",
+      modelName: "model"
+    });
+    repos.reports.save({
+      id: "weekly-2026-W28",
+      date: "2026-W28",
+      type: "weekly",
+      content: "Weekly summary",
+      generatedAt: "2026-07-08T18:00:00.000Z",
+      updatedAt: "2026-07-08T18:00:00.000Z",
+      providerId: "provider-1",
+      modelName: "model"
+    });
 
     expect(repos.captures.listByDate("2026-07-07")).toHaveLength(1);
     expect(repos.recordingSessions.listByDate("2026-07-07")).toEqual([
@@ -68,6 +88,11 @@ describe("storage repositories", () => {
     ]);
     expect(repos.workEvents.listByDate("2026-07-07")).toHaveLength(1);
     expect(repos.reports.getByDate("2026-07-07")?.content).toContain("Reviewed");
+    expect(repos.reports.getByDateAndType("2026-W28", "weekly")?.content).toBe("Weekly summary");
+    expect(repos.reports.listDailyByDateRange("2026-07-07", "2026-07-08").map((report) => report.date)).toEqual([
+      "2026-07-07",
+      "2026-07-08"
+    ]);
     expect(repos.aiProviders.listEnabled()[0].name).toBe("MiniMax");
   });
 });

@@ -1,20 +1,41 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
-import { Copy, FileDown, FileText, Save } from "lucide-vue-next";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { CalendarDays, Copy, FileDown, FileText, Save, Sparkles } from "lucide-vue-next";
 import { todayRefreshIntervalMs } from "./todayViewModel";
 import { buildTodayReportView, emptyDailyReport } from "./reportsViewModel";
 
 const currentReport = ref(emptyDailyReport);
+const weeklyReportDraft = ref("# 本周周报\n\n- 点击「生成本周周报」后，从已保存日报库汇总。");
 const reports = ref<Array<{ id: string; date: string; status: string; count: number }>>([]);
 const saving = ref(false);
+const weeklyGenerating = ref(false);
+const weeklySaving = ref(false);
 const reportDirty = ref(false);
+const weeklyDirty = ref(false);
 const saveStatusMessage = ref("");
 const saveErrorMessage = ref("");
+const weeklyStatusMessage = ref("");
+const weeklyErrorMessage = ref("");
+const weeklyMeta = ref<{
+  weekKey: string;
+  startDate: string;
+  endDate: string;
+  sourceReportCount: number;
+} | null>(null);
 let refreshTimer: number | undefined;
 let loading = false;
 
+const weeklyMetaLabel = computed(() => {
+  if (!weeklyMeta.value) return "本周";
+  return `${weeklyMeta.value.startDate} 至 ${weeklyMeta.value.endDate} · ${weeklyMeta.value.weekKey}`;
+});
+
 async function copyReport(): Promise<void> {
   await navigator.clipboard?.writeText(currentReport.value);
+}
+
+async function copyWeeklyReport(): Promise<void> {
+  await navigator.clipboard?.writeText(weeklyReportDraft.value);
 }
 
 function todayDateKey(): string {
@@ -71,6 +92,57 @@ async function saveCurrentReport(): Promise<void> {
   }
 }
 
+async function generateWeeklyReport(): Promise<void> {
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard) return;
+
+  weeklyGenerating.value = true;
+  weeklyStatusMessage.value = "";
+  weeklyErrorMessage.value = "";
+  try {
+    const result = await dashboard.generateWeeklyReport();
+    weeklyReportDraft.value = result.content;
+    weeklyDirty.value = false;
+    weeklyMeta.value = {
+      weekKey: result.weekKey,
+      startDate: result.startDate,
+      endDate: result.endDate,
+      sourceReportCount: result.sourceReportCount
+    };
+    weeklyStatusMessage.value =
+      result.sourceReportCount > 0 ? `已汇总 ${result.sourceReportCount} 篇日报` : "本周暂无已保存日报";
+  } catch (error) {
+    weeklyErrorMessage.value = error instanceof Error ? error.message : "生成周报失败";
+  } finally {
+    weeklyGenerating.value = false;
+  }
+}
+
+async function saveCurrentWeeklyReport(): Promise<void> {
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard) return;
+
+  weeklySaving.value = true;
+  weeklyStatusMessage.value = "";
+  weeklyErrorMessage.value = "";
+  try {
+    const result = await dashboard.saveWeeklyReport(weeklyReportDraft.value);
+    weeklyReportDraft.value = result.content;
+    weeklyDirty.value = false;
+    weeklyMeta.value = {
+      weekKey: result.weekKey,
+      startDate: result.startDate,
+      endDate: result.endDate,
+      sourceReportCount: weeklyMeta.value?.sourceReportCount ?? 0
+    };
+    weeklyStatusMessage.value = `周报已保存 ${clockLabel()}`;
+  } catch (error) {
+    weeklyErrorMessage.value = error instanceof Error ? error.message : "保存周报失败";
+  } finally {
+    weeklySaving.value = false;
+  }
+}
+
 function updateCurrentReport(event: Event): void {
   currentReport.value = (event.target as HTMLTextAreaElement).value;
   reportDirty.value = true;
@@ -79,6 +151,15 @@ function updateCurrentReport(event: Event): void {
     saveStatusMessage.value = "未保存修改";
   }
   reports.value = reports.value.map((report, index) => (index === 0 ? { ...report, status: "草稿" } : report));
+}
+
+function updateWeeklyReport(event: Event): void {
+  weeklyReportDraft.value = (event.target as HTMLTextAreaElement).value;
+  weeklyDirty.value = true;
+  weeklyErrorMessage.value = "";
+  if (weeklyStatusMessage.value.startsWith("周报已保存")) {
+    weeklyStatusMessage.value = "周报有未保存修改";
+  }
 }
 
 function refreshWhenVisible(): void {
@@ -139,11 +220,57 @@ onBeforeUnmount(() => {
             <span>{{ report.status }}，{{ report.count }} 条事件</span>
           </div>
         </article>
+        <article class="report-row weekly-row">
+          <CalendarDays :size="17" :stroke-width="1.9" />
+          <div>
+            <strong>本周周报</strong>
+            <span>{{ weeklyMeta ? `${weeklyMeta.sourceReportCount} 篇日报` : "等待生成" }}</span>
+          </div>
+        </article>
       </aside>
 
-      <section class="editor-panel">
-        <textarea :value="currentReport" spellcheck="false" aria-label="日报内容" @input="updateCurrentReport"></textarea>
-      </section>
+      <div class="editor-stack">
+        <section class="editor-panel">
+          <textarea :value="currentReport" spellcheck="false" aria-label="日报内容" @input="updateCurrentReport"></textarea>
+        </section>
+
+        <section class="weekly-panel" aria-label="周报总结">
+          <div class="weekly-header">
+            <div>
+              <p>周报总结</p>
+              <h2>{{ weeklyMetaLabel }}</h2>
+            </div>
+            <div class="weekly-actions">
+              <span v-if="weeklyErrorMessage" class="save-message error">{{ weeklyErrorMessage }}</span>
+              <span v-else-if="weeklyStatusMessage" class="save-message">{{ weeklyStatusMessage }}</span>
+              <button type="button" title="复制本周周报" @click="copyWeeklyReport">
+                <Copy :size="16" :stroke-width="1.9" />
+                <span>复制</span>
+              </button>
+              <button type="button" title="从日报库生成本周周报" :disabled="weeklyGenerating" @click="generateWeeklyReport">
+                <Sparkles :size="16" :stroke-width="1.9" />
+                <span>{{ weeklyGenerating ? "生成中" : "生成本周周报" }}</span>
+              </button>
+              <button
+                type="button"
+                title="保存本周周报"
+                :disabled="weeklySaving || !weeklyReportDraft.trim()"
+                @click="saveCurrentWeeklyReport"
+              >
+                <Save :size="16" :stroke-width="1.9" />
+                <span>{{ weeklySaving ? "保存中" : weeklyDirty ? "保存修改" : "保存周报" }}</span>
+              </button>
+            </div>
+          </div>
+          <textarea
+            class="weekly-textarea"
+            :value="weeklyReportDraft"
+            spellcheck="false"
+            aria-label="周报内容"
+            @input="updateWeeklyReport"
+          ></textarea>
+        </section>
+      </div>
     </div>
   </section>
 </template>
@@ -240,7 +367,8 @@ onBeforeUnmount(() => {
 }
 
 .report-list,
-.editor-panel {
+.editor-panel,
+.weekly-panel {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background:
@@ -277,6 +405,11 @@ onBeforeUnmount(() => {
   color: var(--accent-strong);
 }
 
+.weekly-row {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
 .report-row:hover {
   background: var(--surface-muted);
   transform: translateX(1px);
@@ -297,15 +430,22 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
+.editor-stack {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: minmax(360px, 1fr) minmax(280px, 0.72fr);
+  gap: 16px;
+}
+
 .editor-panel {
   min-height: 0;
   overflow: hidden;
 }
 
-.editor-panel textarea {
+.editor-panel textarea,
+.weekly-textarea {
   width: 100%;
   height: 100%;
-  min-height: 520px;
   border: 0;
   padding: 22px;
   background:
@@ -316,5 +456,87 @@ onBeforeUnmount(() => {
   font-family: "Cascadia Mono", Consolas, "Microsoft YaHei UI", monospace;
   font-size: 13px;
   line-height: 1.68;
+}
+
+.editor-panel textarea {
+  min-height: 360px;
+}
+
+.weekly-panel {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(210px, 1fr);
+  overflow: hidden;
+}
+
+.weekly-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid var(--line);
+  padding: 16px 18px;
+}
+
+.weekly-header p,
+.weekly-header h2 {
+  margin: 0;
+}
+
+.weekly-header p {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.weekly-header h2 {
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 760;
+}
+
+.weekly-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.weekly-actions button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: var(--surface-raised);
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  transition:
+    border-color 240ms var(--motion),
+    background 240ms var(--motion),
+    color 240ms var(--motion),
+    box-shadow 240ms var(--motion),
+    transform 240ms var(--motion);
+}
+
+.weekly-actions button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.weekly-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.weekly-textarea {
+  min-height: 210px;
 }
 </style>
