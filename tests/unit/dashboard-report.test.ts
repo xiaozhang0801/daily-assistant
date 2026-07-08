@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AppRepositories } from "../../src/main/services/storage/repositories";
-import type { WorkEvent } from "../../src/shared/types";
+import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "../../src/main/services/ai/provider";
+import type { AIProviderProfile, WorkEvent, WorkEventDraft } from "../../src/shared/types";
 import { generateDashboardReport } from "../../src/main/ipc/dashboardReport";
 
 const workEvent: WorkEvent = {
@@ -15,7 +16,12 @@ const workEvent: WorkEvent = {
   source: "ai"
 };
 
-function createRepositoryStub(): AppRepositories {
+function createRepositoryStub(enabledProvider?: AIProviderProfile): AppRepositories {
+  const settings = new Map<string, string>([
+    ["ai.apiKey", enabledProvider ? "api-key" : ""],
+    ["prompt.dailyReport", "请根据事件生成日报。"]
+  ]);
+
   return {
     captures: {
       save: vi.fn(),
@@ -31,7 +37,7 @@ function createRepositoryStub(): AppRepositories {
     },
     aiProviders: {
       save: vi.fn(),
-      listEnabled: vi.fn(() => [])
+      listEnabled: vi.fn(() => (enabledProvider ? [enabledProvider] : []))
     },
     promptTemplates: {
       save: vi.fn(),
@@ -39,9 +45,32 @@ function createRepositoryStub(): AppRepositories {
     },
     settings: {
       set: vi.fn(),
-      get: vi.fn(() => null)
+      get: vi.fn((key: string) => settings.get(key) ?? null)
     }
   } as unknown as AppRepositories;
+}
+
+function createProviderStub(content: string): AIProvider {
+  return {
+    profile: {
+      id: "primary",
+      name: "MiniMax",
+      type: "minimax",
+      baseUrl: null,
+      apiKeyRef: "settings:ai.apiKey",
+      modelName: "MiniMax-M3",
+      customHeaders: {},
+      enabled: true
+    },
+    analyzeScreenshot: async (_input: ScreenshotAnalysisInput): Promise<WorkEventDraft> => ({
+      title: "",
+      summary: "",
+      category: "",
+      confidence: 0
+    }),
+    generateDailyReport: async (_input: DailyReportInput) => content,
+    checkConnection: async () => ({ ok: true, message: "连接成功。" })
+  };
 }
 
 describe("dashboard report generation", () => {
@@ -61,6 +90,35 @@ describe("dashboard report generation", () => {
         date: "2026-07-08",
         type: "daily",
         content: result.content,
+        providerId: "local-fallback",
+        modelName: "fallback"
+      })
+    );
+  });
+
+  it("falls back to an event-based report when AI returns only a completion status", async () => {
+    const profile: AIProviderProfile = {
+      id: "primary",
+      name: "MiniMax",
+      type: "minimax",
+      baseUrl: null,
+      apiKeyRef: "settings:ai.apiKey",
+      modelName: "MiniMax-M3",
+      customHeaders: {},
+      enabled: true
+    };
+    const repositories = createRepositoryStub(profile);
+
+    const result = await generateDashboardReport({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z"),
+      createProvider: () => createProviderStub("已生成")
+    });
+
+    expect(result.content).toContain("Implemented realtime dashboard refresh");
+    expect(result.content).not.toBe("已生成");
+    expect(repositories.reports.save).toHaveBeenCalledWith(
+      expect.objectContaining({
         providerId: "local-fallback",
         modelName: "fallback"
       })

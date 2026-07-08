@@ -1,8 +1,50 @@
 <script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import type { WorkEvent } from "../../shared/types";
 import TimelineList from "../components/TimelineList.vue";
+import { summarizeEventCategories, todayRefreshIntervalMs } from "./todayViewModel";
 
-const events: WorkEvent[] = [];
+const events = ref<WorkEvent[]>([]);
+let refreshTimer: number | undefined;
+let loading = false;
+
+const categorySummary = computed(() => summarizeEventCategories(events.value));
+
+async function loadTimeline(): Promise<void> {
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard || loading) return;
+
+  loading = true;
+  try {
+    const today = await dashboard.getToday();
+    events.value = today.events;
+  } finally {
+    loading = false;
+  }
+}
+
+function refreshWhenVisible(): void {
+  if (document.visibilityState === "visible") {
+    void loadTimeline();
+  }
+}
+
+onMounted(() => {
+  void loadTimeline();
+  refreshTimer = window.setInterval(() => {
+    void loadTimeline();
+  }, todayRefreshIntervalMs);
+  window.addEventListener("focus", refreshWhenVisible);
+  document.addEventListener("visibilitychange", refreshWhenVisible);
+});
+
+onBeforeUnmount(() => {
+  if (refreshTimer) {
+    window.clearInterval(refreshTimer);
+  }
+  window.removeEventListener("focus", refreshWhenVisible);
+  document.removeEventListener("visibilitychange", refreshWhenVisible);
+});
 </script>
 
 <template>
@@ -20,20 +62,13 @@ const events: WorkEvent[] = [];
       <aside class="side-panel">
         <p>分组</p>
         <h2>工作类型</h2>
-        <div class="category-list">
-          <div>
-            <span>开发</span>
-            <strong>0</strong>
-          </div>
-          <div>
-            <span>沟通</span>
-            <strong>0</strong>
-          </div>
-          <div>
-            <span>文档</span>
-            <strong>0</strong>
+        <div v-if="categorySummary.length" class="category-list">
+          <div v-for="item in categorySummary" :key="item.label">
+            <span>{{ item.label }}</span>
+            <strong>{{ item.count }}</strong>
           </div>
         </div>
+        <p v-else class="empty-note">暂无分类数据</p>
       </aside>
     </div>
   </section>
@@ -42,10 +77,12 @@ const events: WorkEvent[] = [];
 <style scoped>
 .page {
   display: flex;
-  min-height: 100vh;
+  height: 100%;
+  min-height: 0;
   flex-direction: column;
   padding: 24px 26px;
   background: transparent;
+  overflow: hidden;
 }
 
 .page-header {
@@ -98,6 +135,7 @@ const events: WorkEvent[] = [];
   border-radius: var(--radius);
   padding: 18px;
   background: var(--surface);
+  overflow: auto;
   box-shadow: var(--shadow-hairline);
 }
 
@@ -142,5 +180,11 @@ const events: WorkEvent[] = [];
 
 .category-list strong {
   font-size: 18px;
+}
+
+.empty-note {
+  margin: 18px 0 0;
+  color: var(--ink-muted);
+  font-size: 13px;
 }
 </style>

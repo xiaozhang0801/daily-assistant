@@ -24,6 +24,23 @@ function nonEmptyContent(value: string): string | null {
   return content.length > 0 ? content : null;
 }
 
+function isCompletionStatusOnly(content: string): boolean {
+  const normalized = content.trim().replace(/[。.!！\s]/g, "");
+  const lower = normalized.toLowerCase();
+  return (
+    normalized === "完成" ||
+    lower === "done" ||
+    (normalized.length <= 8 && (normalized.includes("已生成") || normalized.includes("生成完成")))
+  );
+}
+
+function usefulReportContent(value: string, eventCount: number): string | null {
+  const content = nonEmptyContent(value);
+  if (!content) return null;
+  if (eventCount > 0 && isCompletionStatusOnly(content)) return null;
+  return content;
+}
+
 export async function generateDashboardReport(
   options: GenerateDashboardReportOptions
 ): Promise<GenerateDashboardReportResult> {
@@ -42,12 +59,13 @@ export async function generateDashboardReport(
   if (profile && apiKey && profile.modelName) {
     try {
       const provider = createProvider(profile, apiKey);
-      content = nonEmptyContent(
+      content = usefulReportContent(
         await provider.generateDailyReport({
           events,
           userInstruction: "请根据今天已分析出的工作事件生成日报。",
           prompt: resolveDailyReportPrompt(options.repositories.settings.get("prompt.dailyReport"))
-        })
+        }),
+        events.length
       );
       providerId = profile.id;
       modelName = profile.modelName;
@@ -57,6 +75,10 @@ export async function generateDashboardReport(
   }
 
   const reportContent = content ?? buildDailyReportFallback(events);
+  if (!content) {
+    providerId = "local-fallback";
+    modelName = "fallback";
+  }
   const timestamp = generatedAt.toISOString();
 
   options.repositories.reports.save({
