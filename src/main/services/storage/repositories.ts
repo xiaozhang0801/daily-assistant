@@ -1,9 +1,12 @@
 import type {
   AIProviderProfile,
   AIProviderType,
+  AppSetting,
   CaptureRecord,
   CaptureStatus,
   DailyReport,
+  PromptPurpose,
+  PromptTemplate,
   ReportType,
   WorkEvent,
   WorkEventSource
@@ -70,6 +73,27 @@ interface AIProviderProfileSaveParams {
   enabled: number;
 }
 
+interface PromptTemplateRow {
+  id: string;
+  name: string;
+  purpose: PromptPurpose;
+  content: string;
+  isDefault: number;
+}
+
+interface PromptTemplateSaveParams {
+  id: string;
+  name: string;
+  purpose: PromptPurpose;
+  content: string;
+  isDefault: number;
+}
+
+interface SettingRow {
+  key: string;
+  value: string;
+}
+
 function dateRange(date: string): DateRangeParams {
   return {
     start: `${date}T00:00:00.000Z`,
@@ -112,6 +136,23 @@ function toAIProviderProfileSaveParams(profile: AIProviderProfile): AIProviderPr
     modelName: profile.modelName,
     customHeaders: JSON.stringify(profile.customHeaders),
     enabled: profile.enabled ? 1 : 0
+  };
+}
+
+function toPromptTemplate(row: PromptTemplateRow): PromptTemplate {
+  return {
+    id: row.id,
+    name: row.name,
+    purpose: row.purpose,
+    content: row.content,
+    isDefault: row.isDefault === 1
+  };
+}
+
+function toPromptTemplateSaveParams(template: PromptTemplate): PromptTemplateSaveParams {
+  return {
+    ...template,
+    isDefault: template.isDefault ? 1 : 0
   };
 }
 
@@ -217,6 +258,48 @@ export function createRepositories(db: AppDatabase) {
           ORDER BY name ASC
         `).all().map(toAIProviderProfile);
       }
+    },
+    promptTemplates: {
+      save(template: PromptTemplate): void {
+        db.prepare<PromptTemplateSaveParams>(`
+          INSERT OR REPLACE INTO prompt_templates
+          (id, name, purpose, content, is_default)
+          VALUES (@id, @name, @purpose, @content, @isDefault)
+        `).run(toPromptTemplateSaveParams(template));
+      },
+      listByPurpose(purpose: PromptPurpose): PromptTemplate[] {
+        return db.prepare<[PromptPurpose], PromptTemplateRow>(`
+          SELECT
+            id,
+            name,
+            purpose,
+            content,
+            is_default AS isDefault
+          FROM prompt_templates
+          WHERE purpose = ?
+          ORDER BY is_default DESC, name ASC
+        `).all(purpose).map(toPromptTemplate);
+      }
+    },
+    settings: {
+      set(key: string, value: string): void {
+        db.prepare<AppSetting>(`
+          INSERT OR REPLACE INTO settings
+          (key, value)
+          VALUES (@key, @value)
+        `).run({ key, value });
+      },
+      get(key: string): string | null {
+        const row = db.prepare<[string], SettingRow>(`
+          SELECT key, value
+          FROM settings
+          WHERE key = ?
+        `).get(key);
+
+        return row?.value ?? null;
+      }
     }
   };
 }
+
+export type AppRepositories = ReturnType<typeof createRepositories>;

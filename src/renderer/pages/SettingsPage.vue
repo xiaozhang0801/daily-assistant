@@ -1,12 +1,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { Bot, KeyRound, Save, SlidersHorizontal } from "lucide-vue-next";
+import { AlertCircle, Bot, KeyRound, Save, SlidersHorizontal, TestTube } from "lucide-vue-next";
+import { defaultDailyReportPrompt, defaultScreenshotPrompt } from "../../main/services/ai/prompts";
+import { normalizeAIProviderSettings } from "./settingsViewModel";
 
 interface SettingsState {
   providerType: "minimax" | "openai_compatible";
   baseUrl: string;
   modelName: string;
   apiKey: string;
+  customHeadersText: string;
+  screenshotPrompt: string;
+  dailyReportPrompt: string;
   uploadToAIEnabled: boolean;
   captureIntervalMinutes: number;
 }
@@ -16,10 +21,16 @@ const settings = ref<SettingsState>({
   baseUrl: "",
   modelName: "",
   apiKey: "",
+  customHeadersText: "",
+  screenshotPrompt: defaultScreenshotPrompt,
+  dailyReportPrompt: defaultDailyReportPrompt,
   uploadToAIEnabled: false,
   captureIntervalMinutes: 5
 });
 const saveText = ref("保存");
+const testText = ref("测试连接");
+const errors = ref<string[]>([]);
+const connectionMessage = ref("");
 
 async function loadSettings(): Promise<void> {
   const result = (await window.dailyAssistant?.settings.get()) as Partial<SettingsState> | undefined;
@@ -28,11 +39,30 @@ async function loadSettings(): Promise<void> {
 }
 
 async function saveSettings(): Promise<void> {
-  await window.dailyAssistant?.settings.save(settings.value);
+  const normalized = normalizeAIProviderSettings(settings.value);
+  errors.value = normalized.errors;
+  if (normalized.errors.length > 0) return;
+
+  await window.dailyAssistant?.settings.save(normalized.value);
   saveText.value = "已保存";
   window.setTimeout(() => {
     saveText.value = "保存";
   }, 1200);
+}
+
+async function testConnection(): Promise<void> {
+  const normalized = normalizeAIProviderSettings(settings.value);
+  errors.value = normalized.errors;
+  connectionMessage.value = "";
+  if (normalized.errors.length > 0) return;
+
+  testText.value = "测试中";
+  try {
+    const result = await window.dailyAssistant?.settings.testAIProvider(normalized.value);
+    connectionMessage.value = result?.message ?? "未返回连接状态";
+  } finally {
+    testText.value = "测试连接";
+  }
 }
 
 onMounted(() => {
@@ -47,10 +77,16 @@ onMounted(() => {
         <p>Settings</p>
         <h1>设置</h1>
       </div>
-      <button class="save-button" type="button" title="保存设置" @click="saveSettings">
-        <Save :size="16" :stroke-width="1.9" />
-        <span>{{ saveText }}</span>
-      </button>
+      <div class="header-actions">
+        <button class="test-button" type="button" title="测试连接" @click="testConnection">
+          <TestTube :size="16" :stroke-width="1.9" />
+          <span>{{ testText }}</span>
+        </button>
+        <button class="save-button" type="button" title="保存设置" @click="saveSettings">
+          <Save :size="16" :stroke-width="1.9" />
+          <span>{{ saveText }}</span>
+        </button>
+      </div>
     </div>
 
     <div class="settings-grid">
@@ -89,6 +125,15 @@ onMounted(() => {
           <span>API Key</span>
           <input v-model="settings.apiKey" type="password" placeholder="只保存在本机" />
         </label>
+        <label>
+          <span>自定义 Headers（JSON）</span>
+          <textarea
+            v-model="settings.customHeadersText"
+            class="headers-textarea"
+            spellcheck="false"
+            placeholder="{ &quot;X-Custom&quot;: &quot;value&quot; }"
+          ></textarea>
+        </label>
       </section>
 
       <section class="settings-panel">
@@ -113,10 +158,27 @@ onMounted(() => {
           <KeyRound :size="18" :stroke-width="1.9" />
           <h2>提示词</h2>
         </div>
-        <textarea
-          value="请根据截图识别今天完成的具体工作，输出结构化工作事件。"
-          aria-label="截图分析提示词"
-        ></textarea>
+        <div class="prompt-grid">
+          <label>
+            <span>截图分析提示词</span>
+            <textarea v-model="settings.screenshotPrompt" spellcheck="false" aria-label="截图分析提示词"></textarea>
+          </label>
+          <label>
+            <span>日报生成提示词</span>
+            <textarea v-model="settings.dailyReportPrompt" spellcheck="false" aria-label="日报生成提示词"></textarea>
+          </label>
+        </div>
+      </section>
+
+      <section v-if="errors.length || connectionMessage" class="settings-panel wide feedback-panel">
+        <div class="panel-title">
+          <AlertCircle :size="18" :stroke-width="1.9" />
+          <h2>状态</h2>
+        </div>
+        <ul v-if="errors.length">
+          <li v-for="error in errors" :key="error">{{ error }}</li>
+        </ul>
+        <p v-else>{{ connectionMessage }}</p>
       </section>
     </div>
   </section>
@@ -154,19 +216,40 @@ onMounted(() => {
   font-size: 25px;
 }
 
-.save-button {
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.save-button,
+.test-button {
   display: inline-flex;
   min-height: 36px;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--accent);
   border-radius: var(--radius);
   padding: 8px 12px;
-  background: var(--accent);
-  color: white;
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
+}
+
+.save-button {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: white;
+}
+
+.test-button {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-soft);
+}
+
+.test-button:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .settings-grid {
@@ -259,6 +342,42 @@ textarea {
   min-height: 150px;
   padding: 12px;
   line-height: 1.6;
+}
+
+.headers-textarea {
+  min-height: 82px;
+  font-family: "Cascadia Mono", Consolas, "Microsoft YaHei UI", monospace;
+  font-size: 12px;
+}
+
+.prompt-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.prompt-grid label {
+  margin-top: 0;
+}
+
+.feedback-panel {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+}
+
+.feedback-panel ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.feedback-panel p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
 }
 
 .toggle-row {

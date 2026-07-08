@@ -19,7 +19,7 @@ declare global {
       settings: {
         get: () => Promise<unknown>;
         save: (settings: unknown) => Promise<{ ok: boolean; settings: unknown }>;
-        testAIProvider: () => Promise<{ ok: boolean; message: string }>;
+        testAIProvider: (settings: unknown) => Promise<{ ok: boolean; message: string }>;
       };
     };
   }

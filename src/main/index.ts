@@ -2,6 +2,8 @@ import { app, BrowserWindow, shell } from "electron";
 import { join } from "node:path";
 import { registerDashboardIpc } from "./ipc/dashboardIpc";
 import { registerSettingsIpc } from "./ipc/settingsIpc";
+import { createDatabase } from "./services/storage/database";
+import { createRepositories } from "./services/storage/repositories";
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -37,8 +39,11 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  const database = createDatabase(join(app.getPath("userData"), "daily-assistant.sqlite"));
+  const repositories = createRepositories(database);
+
   registerDashboardIpc();
-  registerSettingsIpc();
+  registerSettingsIpc(repositories);
   createWindow();
 
   app.on("activate", () => {

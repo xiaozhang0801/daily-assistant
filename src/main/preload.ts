@@ -11,6 +11,6 @@ contextBridge.exposeInMainWorld("dailyAssistant", {
   settings: {
     get: () => ipcRenderer.invoke(settingsChannels.get),
     save: (settings: unknown) => ipcRenderer.invoke(settingsChannels.save, settings),
-    testAIProvider: () => ipcRenderer.invoke(settingsChannels.testAIProvider)
+    testAIProvider: (settings: unknown) => ipcRenderer.invoke(settingsChannels.testAIProvider, settings)
   }
 });
