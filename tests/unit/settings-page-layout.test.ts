@@ -17,4 +17,13 @@ describe("Settings page layout", () => {
     expect(settingsGridIndex).toBeGreaterThanOrEqual(0);
     expect(feedbackIndex).toBeLessThan(settingsGridIndex);
   });
+
+  it("explains that the Git search root can be a parent folder or a project folder", () => {
+    const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+    const source = readFileSync(resolve(root, "src/renderer/pages/SettingsPage.vue"), "utf8");
+    const template = parse(source).descriptor.template?.content ?? "";
+
+    expect(template).toContain("可以填写总根目录，也可以填写具体项目目录");
+    expect(template).toContain("代码日报会在这个范围内搜索 Git 仓库");
+  });
 });

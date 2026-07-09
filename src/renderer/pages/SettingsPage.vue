@@ -212,6 +212,9 @@ watch(
         <label>
           <span>Git 搜索根目录</span>
           <input v-model="settings.gitSearchRoot" type="text" placeholder="C:\\project 或 C:\\project\\日报" />
+          <small class="field-hint">
+            可以填写总根目录，也可以填写具体项目目录；代码日报会在这个范围内搜索 Git 仓库。
+          </small>
         </label>
       </section>
 
@@ -396,6 +399,12 @@ label span {
   color: var(--ink-soft);
   font-size: 12px;
   font-weight: 750;
+}
+
+.field-hint {
+  color: var(--ink-muted);
+  font-size: 12px;
+  line-height: 1.55;
 }
 
 input,
