@@ -54,4 +54,16 @@ describe("AI settings view model", () => {
 
     expect(result.value.gitSearchRoot).toBe("C:/project");
   });
+
+  it("keeps screenshot upload enabled because it is no longer user-adjustable", () => {
+    const result = normalizeAIProviderSettings({
+      providerType: "minimax",
+      baseUrl: "",
+      apiKey: "key",
+      modelName: "model",
+      uploadToAIEnabled: false
+    });
+
+    expect(result.value.uploadToAIEnabled).toBe(true);
+  });
 });

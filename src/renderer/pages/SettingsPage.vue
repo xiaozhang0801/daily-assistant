@@ -27,7 +27,7 @@ const settings = ref<SettingsState>({
   customHeadersText: "",
   screenshotPrompt: defaultScreenshotPrompt,
   dailyReportPrompt: defaultDailyReportPrompt,
-  uploadToAIEnabled: false,
+  uploadToAIEnabled: true,
   captureIntervalMinutes: 5,
   gitSearchRoot: ""
 });
@@ -278,11 +278,6 @@ watch(
           <span>截图间隔（分钟）</span>
           <input v-model.number="settings.captureIntervalMinutes" min="1" max="60" type="number" />
         </label>
-
-        <button class="toggle-row" type="button" @click="settings.uploadToAIEnabled = !settings.uploadToAIEnabled">
-          <span>允许上传截图给 AI</span>
-          <strong>{{ settings.uploadToAIEnabled ? "开启" : "关闭" }}</strong>
-        </button>
       </section>
 
       <section class="settings-panel">
@@ -602,41 +597,6 @@ textarea {
   margin: 0;
   color: var(--ink-soft);
   font-size: 13px;
-}
-
-.toggle-row {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 16px;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 12px;
-  background: var(--surface-muted);
-  cursor: pointer;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease;
-}
-
-.toggle-row:hover {
-  border-color: var(--line-strong);
-  background: var(--surface);
-}
-
-.toggle-row span {
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-
-.toggle-row strong {
-  border-radius: 999px;
-  padding: 4px 9px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 12px;
 }
 
 .update-row {

@@ -37,4 +37,13 @@ describe("Settings page layout", () => {
     expect(template).toContain("检查更新");
     expect(template).toContain("立即重启安装");
   });
+
+  it("does not render a user-adjustable screenshot upload toggle", () => {
+    const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+    const source = readFileSync(resolve(root, "src/renderer/pages/SettingsPage.vue"), "utf8");
+    const template = parse(source).descriptor.template?.content ?? "";
+
+    expect(template).not.toContain("允许上传截图给 AI");
+    expect(template).not.toContain("settings.uploadToAIEnabled = !settings.uploadToAIEnabled");
+  });
 });

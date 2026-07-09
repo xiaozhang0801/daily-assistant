@@ -34,7 +34,7 @@ const defaultSettings: AISettingsPayload = {
   customHeadersText: "",
   screenshotPrompt: defaultScreenshotPrompt,
   dailyReportPrompt: defaultDailyReportPrompt,
-  uploadToAIEnabled: false,
+  uploadToAIEnabled: true,
   captureIntervalMinutes: 5,
   gitSearchRoot: ""
 };
@@ -51,10 +51,6 @@ function isProviderType(value: unknown): value is AIProviderType {
 
 function stringValue(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
-}
-
-function booleanValue(value: unknown, fallback = false): boolean {
-  return typeof value === "boolean" ? value : fallback;
 }
 
 function numberValue(value: unknown, fallback = 5): number {
@@ -93,13 +89,23 @@ function normalizePayload(value: unknown): AISettingsPayload {
     customHeadersText: stringValue(value.customHeadersText, JSON.stringify(customHeaders, null, 2)),
     screenshotPrompt: stringValue(value.screenshotPrompt, defaultScreenshotPrompt),
     dailyReportPrompt: stringValue(value.dailyReportPrompt, defaultDailyReportPrompt),
-    uploadToAIEnabled: booleanValue(value.uploadToAIEnabled),
+    uploadToAIEnabled: true,
     captureIntervalMinutes: Math.max(1, Math.min(60, numberValue(value.captureIntervalMinutes))),
     gitSearchRoot: stringValue(value.gitSearchRoot).trim()
   };
 }
 
+function ensureScreenshotUploadEnabled(repositories?: AppRepositories): void {
+  memorySettings = { ...memorySettings, uploadToAIEnabled: true };
+
+  if (!repositories) return;
+  if (repositories.settings.get("capture.uploadToAIEnabled") !== "true") {
+    repositories.settings.set("capture.uploadToAIEnabled", "true");
+  }
+}
+
 function readSettings(repositories?: AppRepositories): AISettingsPayload {
+  ensureScreenshotUploadEnabled(repositories);
   if (!repositories) return memorySettings;
 
   const storedProviderType = repositories.settings.get("ai.providerType");
@@ -113,7 +119,7 @@ function readSettings(repositories?: AppRepositories): AISettingsPayload {
     customHeadersText: repositories.settings.get("ai.customHeadersText") ?? "",
     screenshotPrompt: resolveScreenshotPrompt(repositories.settings.get("prompt.screenshot")),
     dailyReportPrompt: resolveDailyReportPrompt(repositories.settings.get("prompt.dailyReport")),
-    uploadToAIEnabled: repositories.settings.get("capture.uploadToAIEnabled") === "true",
+    uploadToAIEnabled: true,
     captureIntervalMinutes: Number(repositories.settings.get("capture.intervalMinutes") ?? "5"),
     gitSearchRoot: repositories.settings.get("git.searchRoot") ?? ""
   };
@@ -137,9 +143,13 @@ function saveSettings(repositories: AppRepositories | undefined, settings: AISet
     settings.providerType === "minimax"
       ? {
           ...settings,
-          baseUrl: ""
+          baseUrl: "",
+          uploadToAIEnabled: true
         }
-      : settings;
+      : {
+          ...settings,
+          uploadToAIEnabled: true
+        };
 
   memorySettings = normalizedSettings;
   if (!repositories) return;
@@ -193,6 +203,8 @@ async function testAIConnection(settings: AISettingsPayload): Promise<{ ok: bool
 }
 
 export function registerSettingsIpc(repositories?: AppRepositories): void {
+  ensureScreenshotUploadEnabled(repositories);
+
   ipcMain.handle(settingsChannels.get, async () => readSettings(repositories));
 
   ipcMain.handle(settingsChannels.save, async (_event, settings: unknown) => {

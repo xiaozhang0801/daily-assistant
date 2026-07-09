@@ -93,7 +93,7 @@ export function normalizeAIProviderSettings(input: AIProviderSettingsInput): {
       customHeadersText,
       screenshotPrompt,
       dailyReportPrompt,
-      uploadToAIEnabled: Boolean(input.uploadToAIEnabled),
+      uploadToAIEnabled: true,
       captureIntervalMinutes,
       gitSearchRoot
     },
