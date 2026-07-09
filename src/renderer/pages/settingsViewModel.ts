@@ -101,6 +101,14 @@ export function normalizeAIProviderSettings(input: AIProviderSettingsInput): {
   };
 }
 
-export function toConnectionStatusMessage(result: ConnectionStatusResult | undefined): string {
-  return result?.message || "没有连接到 Electron 主进程，请在桌面应用窗口中测试连接";
+export function toConnectionStatusMessage(
+  result: ConnectionStatusResult | undefined,
+  options: { hasUnsavedChanges?: boolean } = {}
+): string {
+  if (!result) return "没有连接到 Electron 主进程，请在桌面应用窗口中测试连接";
+  if (result.ok && options.hasUnsavedChanges) {
+    return `${result.message}当前只是测试表单内容，还没有保存设置。请点击保存后再用于生成日报和截图分析。`;
+  }
+
+  return result.message;
 }

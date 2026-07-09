@@ -15,7 +15,9 @@ declare global {
         }>;
         pauseCapture: () => Promise<{ ok: boolean; recording: boolean }>;
         resumeCapture: () => Promise<{ ok: boolean; recording: boolean }>;
-        generateReport: (request?: import("../../shared/types").GenerateReportRequest) => Promise<{ content: string }>;
+        generateReport: (
+          request?: import("../../shared/types").GenerateReportRequest
+        ) => Promise<import("../../shared/types").DailyReportGenerationResult>;
         saveReport: (content: string) => Promise<{ ok: true; content: string; date: string }>;
         generateWeeklyReport: () => Promise<import("../../shared/types").WeeklyReportGenerationResult>;
         saveWeeklyReport: (content: string) => Promise<import("../../shared/types").WeeklyReportSaveResult>;

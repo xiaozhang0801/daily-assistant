@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
-import { Activity, Database, FileText, TimerReset } from "lucide-vue-next";
+import { Activity, AlertCircle, Database, FileText, TimerReset } from "lucide-vue-next";
 import type { ReportGenerationMode, WorkEvent } from "../../shared/types";
 import PrivacyPanel from "../components/PrivacyPanel.vue";
 import ReportEditor from "../components/ReportEditor.vue";
 import StatusBar from "../components/StatusBar.vue";
 import TimelineList from "../components/TimelineList.vue";
 import { defaultReportGenerationMode } from "./reportModeViewModel";
-import { todayRefreshIntervalMs } from "./todayViewModel";
+import { todayRefreshIntervalMs, toReportGenerationStatusMessage, toResumeCaptureStatusMessage } from "./todayViewModel";
 
 interface TodayState {
   recording: boolean;
@@ -35,6 +35,9 @@ const reportDirty = ref(false);
 const copyState = ref("复制");
 const reportStatusMessage = ref("");
 const reportErrorMessage = ref("");
+const reportStatusTone = ref<"success" | "warning">("success");
+const operationMessage = ref("");
+const operationTone = ref<"info" | "warning" | "error">("info");
 let refreshTimer: number | undefined;
 let loadingToday = false;
 
@@ -99,24 +102,59 @@ async function loadToday(preserveReportDraft = false): Promise<void> {
 }
 
 async function pauseCapture(): Promise<void> {
-  await window.dailyAssistant?.dashboard.pauseCapture();
-  await loadToday();
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard) {
+    operationTone.value = "error";
+    operationMessage.value = "没有连接到 Electron 主进程，无法暂停记录。";
+    return;
+  }
+
+  try {
+    await dashboard.pauseCapture();
+    await loadToday();
+    operationTone.value = "info";
+    operationMessage.value = "已暂停记录。";
+  } catch (error) {
+    operationTone.value = "error";
+    operationMessage.value = error instanceof Error ? error.message : "暂停记录失败";
+  }
 }
 
 async function resumeCapture(): Promise<void> {
-  await window.dailyAssistant?.dashboard.resumeCapture();
-  await loadToday();
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard) {
+    operationTone.value = "error";
+    operationMessage.value = "没有连接到 Electron 主进程，无法继续记录。";
+    return;
+  }
+
+  try {
+    await dashboard.resumeCapture();
+    await loadToday();
+    operationTone.value = state.value.providerStatus === "ready" ? "info" : "warning";
+    operationMessage.value = toResumeCaptureStatusMessage(state.value.providerStatus);
+  } catch (error) {
+    operationTone.value = "error";
+    operationMessage.value = error instanceof Error ? error.message : "继续记录失败";
+  }
 }
 
 async function generateReport(): Promise<void> {
+  const dashboard = window.dailyAssistant?.dashboard;
+  if (!dashboard) {
+    reportErrorMessage.value = "没有连接到 Electron 主进程，无法生成日报。";
+    return;
+  }
+
   generating.value = true;
   reportStatusMessage.value = "";
   reportErrorMessage.value = "";
   try {
-    const result = await window.dailyAssistant?.dashboard.generateReport({ mode: reportMode.value });
-    reportDraft.value = result?.content ?? defaultReport;
+    const result = await dashboard.generateReport({ mode: reportMode.value });
+    reportDraft.value = result.content || defaultReport;
     reportDirty.value = true;
-    reportStatusMessage.value = `已生成 ${clockLabel()}，未保存`;
+    reportStatusTone.value = result.source === "ai" && !result.notice ? "success" : "warning";
+    reportStatusMessage.value = `${toReportGenerationStatusMessage(result)}（${clockLabel()}，未保存）`;
     await loadToday(true);
   } catch (error) {
     reportErrorMessage.value = error instanceof Error ? error.message : "生成日报失败";
@@ -136,6 +174,7 @@ async function saveReport(): Promise<void> {
     const result = await dashboard.saveReport(reportDraft.value);
     reportDraft.value = result.content;
     reportDirty.value = false;
+    reportStatusTone.value = "success";
     reportStatusMessage.value = `已保存 ${clockLabel()}`;
     await loadToday(true);
   } catch (error) {
@@ -155,11 +194,18 @@ function updateReportDraft(value: string): void {
 }
 
 async function copyReport(): Promise<void> {
-  await navigator.clipboard?.writeText(reportDraft.value);
-  copyState.value = "已复制";
-  window.setTimeout(() => {
-    copyState.value = "复制";
-  }, 1200);
+  try {
+    await navigator.clipboard?.writeText(reportDraft.value);
+    copyState.value = "已复制";
+    operationTone.value = "info";
+    operationMessage.value = "日报内容已复制到剪贴板。";
+    window.setTimeout(() => {
+      copyState.value = "复制";
+    }, 1200);
+  } catch (error) {
+    operationTone.value = "error";
+    operationMessage.value = error instanceof Error ? error.message : "复制日报失败";
+  }
 }
 
 function refreshWhenVisible(): void {
@@ -197,6 +243,11 @@ onBeforeUnmount(() => {
       @resume="resumeCapture"
     />
 
+    <div v-if="operationMessage" class="operation-banner" :class="operationTone">
+      <AlertCircle :size="16" :stroke-width="1.9" />
+      <span>{{ operationMessage }}</span>
+    </div>
+
     <div class="today-content">
       <section class="overview-strip" aria-label="今日指标">
         <div v-for="item in overview" :key="item.label" class="overview-item">
@@ -223,6 +274,7 @@ onBeforeUnmount(() => {
         :generating="generating"
         :saving="saving"
         :status-message="reportStatusMessage"
+        :status-tone="reportStatusTone"
         :error-message="reportErrorMessage"
         @update:model-value="updateReportDraft"
         @update:generation-mode="reportMode = $event"
@@ -243,6 +295,32 @@ onBeforeUnmount(() => {
   flex-direction: column;
   background: transparent;
   overflow: hidden;
+}
+
+.operation-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 28px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.operation-banner.warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.operation-banner.error {
+  background: rgba(199, 56, 56, 0.1);
+  color: var(--danger);
+}
+
+.operation-banner svg {
+  flex: 0 0 auto;
 }
 
 .today-content {

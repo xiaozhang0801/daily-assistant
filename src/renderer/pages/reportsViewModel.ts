@@ -37,3 +37,11 @@ export function buildTodayReportView(input: TodayReportInput): TodayReportView {
     ]
   };
 }
+
+export function toDesktopBridgeUnavailableMessage(action: string): string {
+  return `没有连接到 Electron 主进程，无法${action}。`;
+}
+
+export function toMarkdownExportUnavailableMessage(): string {
+  return "导出 Markdown 还没有接入文件保存功能，请先使用复制。";
+}

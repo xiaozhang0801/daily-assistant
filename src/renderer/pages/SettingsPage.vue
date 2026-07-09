@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { nextTick, onMounted, ref, watch } from "vue";
 import { AlertCircle, Bot, GitBranch, KeyRound, Save, SlidersHorizontal, TestTube } from "lucide-vue-next";
 import { defaultDailyReportPrompt, defaultScreenshotPrompt } from "../../main/services/ai/prompts";
 import { normalizeAIProviderSettings, toConnectionStatusMessage } from "./settingsViewModel";
@@ -33,11 +33,18 @@ const saveText = ref("保存");
 const testText = ref("测试连接");
 const errors = ref<string[]>([]);
 const connectionMessage = ref("");
+const settingsDirty = ref(false);
+const settingsLoaded = ref(false);
 
 async function loadSettings(): Promise<void> {
+  settingsLoaded.value = false;
   const result = (await window.dailyAssistant?.settings.get()) as Partial<SettingsState> | undefined;
-  if (!result) return;
-  settings.value = { ...settings.value, ...result };
+  if (result) {
+    settings.value = { ...settings.value, ...result };
+  }
+  await nextTick();
+  settingsDirty.value = false;
+  settingsLoaded.value = true;
 }
 
 async function saveSettings(): Promise<void> {
@@ -45,11 +52,23 @@ async function saveSettings(): Promise<void> {
   errors.value = normalized.errors;
   if (normalized.errors.length > 0) return;
 
-  await window.dailyAssistant?.settings.save(normalized.value);
-  saveText.value = "已保存";
-  window.setTimeout(() => {
-    saveText.value = "保存";
-  }, 1200);
+  const bridge = window.dailyAssistant?.settings;
+  if (!bridge) {
+    connectionMessage.value = "没有连接到 Electron 主进程，无法保存设置。";
+    return;
+  }
+
+  try {
+    await bridge.save(normalized.value);
+    settingsDirty.value = false;
+    connectionMessage.value = "设置已保存，生成日报和截图分析将使用当前配置。";
+    saveText.value = "已保存";
+    window.setTimeout(() => {
+      saveText.value = "保存";
+    }, 1200);
+  } catch (error) {
+    connectionMessage.value = error instanceof Error ? error.message : "保存设置失败";
+  }
 }
 
 async function testConnection(): Promise<void> {
@@ -67,7 +86,7 @@ async function testConnection(): Promise<void> {
   testText.value = "测试中";
   try {
     const result = await bridge.testAIProvider(normalized.value);
-    connectionMessage.value = toConnectionStatusMessage(result);
+    connectionMessage.value = toConnectionStatusMessage(result, { hasUnsavedChanges: settingsDirty.value });
   } catch (error) {
     connectionMessage.value = error instanceof Error ? error.message : "测试连接失败";
   } finally {
@@ -78,6 +97,16 @@ async function testConnection(): Promise<void> {
 onMounted(() => {
   void loadSettings();
 });
+
+watch(
+  settings,
+  () => {
+    if (!settingsLoaded.value) return;
+    settingsDirty.value = true;
+    connectionMessage.value = "当前设置有未保存修改。测试连接会使用当前表单值；生成日报前需要点击保存。";
+  },
+  { deep: true }
+);
 </script>
 
 <template>

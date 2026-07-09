@@ -179,7 +179,11 @@ export function registerDashboardIpc(options: DashboardIpcOptions = {}): void {
     const mode = reportGenerationModeFromRequest(request);
     const result = options.repositories
       ? await generateDashboardReport({ repositories: options.repositories, mode })
-      : { content: buildDailyReportFallback((controller.getToday() as { events?: WorkEvent[] }).events ?? []) };
+      : {
+          content: buildDailyReportFallback((controller.getToday() as { events?: WorkEvent[] }).events ?? []),
+          source: "fallback" as const,
+          notice: "没有连接到本地数据库，已使用当前页面记录生成基础日报。"
+        };
     controller.setReportDraft(result.content, false);
     return result;
   });

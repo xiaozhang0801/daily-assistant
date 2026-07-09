@@ -100,6 +100,60 @@ describe("dashboard report generation", () => {
     expect(repositories.reports.save).not.toHaveBeenCalled();
   });
 
+  it("explains when AI report generation cannot use unsaved provider settings", async () => {
+    const profile: AIProviderProfile = {
+      id: "primary",
+      name: "MiniMax",
+      type: "minimax",
+      baseUrl: null,
+      apiKeyRef: "settings:ai.apiKey",
+      modelName: "MiniMax-M3",
+      customHeaders: {},
+      enabled: true
+    };
+    const repositories = createRepositoryStub(profile, { "ai.apiKey": "" });
+
+    const result = await generateDashboardReport({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z")
+    });
+
+    expect(result.source).toBe("fallback");
+    expect(result.notice).toContain("设置里还没有保存 API Key");
+    expect(result.notice).toContain("已使用本地记录生成基础日报");
+    expect(result.content).toContain("Implemented realtime dashboard refresh");
+  });
+
+  it("explains when AI report generation fails and fallback content is used", async () => {
+    const profile: AIProviderProfile = {
+      id: "primary",
+      name: "MiniMax",
+      type: "minimax",
+      baseUrl: null,
+      apiKeyRef: "settings:ai.apiKey",
+      modelName: "MiniMax-M3",
+      customHeaders: {},
+      enabled: true
+    };
+    const repositories = createRepositoryStub(profile);
+
+    const result = await generateDashboardReport({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z"),
+      createProvider: () => ({
+        ...createProviderStub("# AI 日报"),
+        generateDailyReport: async () => {
+          throw new Error("AI provider request failed: 401");
+        }
+      })
+    });
+
+    expect(result.source).toBe("fallback");
+    expect(result.notice).toContain("AI 生成失败");
+    expect(result.notice).toContain("已使用本地记录生成基础日报");
+    expect(result.content).toContain("Implemented realtime dashboard refresh");
+  });
+
   it("falls back to an event-based report when AI returns only a completion status", async () => {
     const profile: AIProviderProfile = {
       id: "primary",

@@ -2,7 +2,12 @@
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { CalendarDays, Copy, FileDown, FileText, Save, Sparkles } from "lucide-vue-next";
 import { todayRefreshIntervalMs } from "./todayViewModel";
-import { buildTodayReportView, emptyDailyReport } from "./reportsViewModel";
+import {
+  buildTodayReportView,
+  emptyDailyReport,
+  toDesktopBridgeUnavailableMessage,
+  toMarkdownExportUnavailableMessage
+} from "./reportsViewModel";
 
 const currentReport = ref(emptyDailyReport);
 const weeklyReportDraft = ref("# 本周周报\n\n- 点击「生成本周周报」后，从已保存日报库汇总。");
@@ -31,11 +36,23 @@ const weeklyMetaLabel = computed(() => {
 });
 
 async function copyReport(): Promise<void> {
-  await navigator.clipboard?.writeText(currentReport.value);
+  saveErrorMessage.value = "";
+  try {
+    await navigator.clipboard?.writeText(currentReport.value);
+    saveStatusMessage.value = "当前日报已复制到剪贴板";
+  } catch (error) {
+    saveErrorMessage.value = error instanceof Error ? error.message : "复制当前日报失败";
+  }
 }
 
 async function copyWeeklyReport(): Promise<void> {
-  await navigator.clipboard?.writeText(weeklyReportDraft.value);
+  weeklyErrorMessage.value = "";
+  try {
+    await navigator.clipboard?.writeText(weeklyReportDraft.value);
+    weeklyStatusMessage.value = "本周周报已复制到剪贴板";
+  } catch (error) {
+    weeklyErrorMessage.value = error instanceof Error ? error.message : "复制本周周报失败";
+  }
 }
 
 function todayDateKey(): string {
@@ -74,7 +91,10 @@ async function loadReports(): Promise<void> {
 
 async function saveCurrentReport(): Promise<void> {
   const dashboard = window.dailyAssistant?.dashboard;
-  if (!dashboard) return;
+  if (!dashboard) {
+    saveErrorMessage.value = toDesktopBridgeUnavailableMessage("保存日报");
+    return;
+  }
 
   saving.value = true;
   saveStatusMessage.value = "";
@@ -94,7 +114,10 @@ async function saveCurrentReport(): Promise<void> {
 
 async function generateWeeklyReport(): Promise<void> {
   const dashboard = window.dailyAssistant?.dashboard;
-  if (!dashboard) return;
+  if (!dashboard) {
+    weeklyErrorMessage.value = toDesktopBridgeUnavailableMessage("生成周报");
+    return;
+  }
 
   weeklyGenerating.value = true;
   weeklyStatusMessage.value = "";
@@ -120,7 +143,10 @@ async function generateWeeklyReport(): Promise<void> {
 
 async function saveCurrentWeeklyReport(): Promise<void> {
   const dashboard = window.dailyAssistant?.dashboard;
-  if (!dashboard) return;
+  if (!dashboard) {
+    weeklyErrorMessage.value = toDesktopBridgeUnavailableMessage("保存周报");
+    return;
+  }
 
   weeklySaving.value = true;
   weeklyStatusMessage.value = "";
@@ -160,6 +186,10 @@ function updateWeeklyReport(event: Event): void {
   if (weeklyStatusMessage.value.startsWith("周报已保存")) {
     weeklyStatusMessage.value = "周报有未保存修改";
   }
+}
+
+function showMarkdownExportMessage(): void {
+  saveErrorMessage.value = toMarkdownExportUnavailableMessage();
 }
 
 function refreshWhenVisible(): void {
@@ -204,7 +234,7 @@ onBeforeUnmount(() => {
           <Save :size="16" :stroke-width="1.9" />
           <span>{{ saving ? "保存中" : "保存" }}</span>
         </button>
-        <button type="button" title="导出 Markdown">
+        <button type="button" title="导出 Markdown" @click="showMarkdownExportMessage">
           <FileDown :size="16" :stroke-width="1.9" />
           <span>导出</span>
         </button>

@@ -6,6 +6,14 @@ export interface GenerateReportRequest {
   mode?: ReportGenerationMode;
 }
 
+export type DailyReportGenerationSource = "ai" | "fallback";
+
+export interface DailyReportGenerationResult {
+  content: string;
+  source: DailyReportGenerationSource;
+  notice?: string;
+}
+
 export interface WorkEvent {
   id: string;
   captureId: string;

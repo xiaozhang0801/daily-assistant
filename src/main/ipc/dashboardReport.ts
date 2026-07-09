@@ -1,5 +1,6 @@
 import type {
   AIProviderProfile,
+  DailyReportGenerationResult,
   DailyReport,
   ReportGenerationMode,
   WeeklyReportGenerationResult,
@@ -29,10 +30,6 @@ interface GenerateDashboardReportOptions {
   now?: () => Date;
   createProvider?: (profile: AIProviderProfile, apiKey: string) => AIProvider;
   collectCodeActivity?: (options: CollectGitActivityOptions) => Promise<GitActivitySummary>;
-}
-
-interface GenerateDashboardReportResult {
-  content: string;
 }
 
 interface SaveDashboardReportOptions {
@@ -136,6 +133,47 @@ function gitActivityCount(codeActivity: GitActivitySummary | null): number {
   return codeActivity.repositories.reduce((total, repository) => total + repository.commits.length, 0);
 }
 
+function reportInputCount(
+  mode: ReportGenerationMode,
+  events: ReturnType<AppRepositories["workEvents"]["listByDate"]>,
+  codeActivity: GitActivitySummary | null
+): number {
+  if (mode === "code") return gitActivityCount(codeActivity);
+  if (mode === "mixed") return events.length + gitActivityCount(codeActivity);
+  return events.length;
+}
+
+function missingAISettingsNotice(profile: AIProviderProfile | undefined, apiKey: string | null): string | null {
+  const missing: string[] = [];
+  if (!profile) missing.push("AI 提供方");
+  if (!apiKey) missing.push("API Key");
+  if (profile && !profile.modelName) missing.push("模型");
+
+  if (missing.length === 0) return null;
+
+  return `未使用 AI 生成：设置里还没有保存 ${missing.join("、")}。请先到设置保存后再生成。已使用本地记录生成基础日报。`;
+}
+
+function aiFailureNotice(): string {
+  return "AI 生成失败，已使用本地记录生成基础日报。请检查设置里的 API Key、模型和接口地址后重试。";
+}
+
+function unusableAIContentNotice(): string {
+  return "AI 返回内容不可用，已使用本地记录生成基础日报。";
+}
+
+function emptyReportInputNotice(mode: ReportGenerationMode): string {
+  if (mode === "code") {
+    return "当前没有可用于生成日报的 Git 提交记录。请确认 Git 搜索根目录已保存，或先产生今日提交后再生成。";
+  }
+
+  if (mode === "mixed") {
+    return "当前没有可用于生成日报的截图分析事件或 Git 提交记录。请先继续记录一段时间，或保存 Git 搜索根目录后再生成。";
+  }
+
+  return "当前没有可用于生成日报的记录。请先继续记录一段时间，并确认设置里的 AI 配置已保存。";
+}
+
 function gitSearchRootFromSettings(repositories: AppRepositories): string | null {
   const root = repositories.settings.get("git.searchRoot")?.trim() ?? "";
   return root.length > 0 ? root : null;
@@ -212,7 +250,7 @@ function buildFallbackReport(mode: ReportGenerationMode, events: ReturnType<AppR
 
 export async function generateDashboardReport(
   options: GenerateDashboardReportOptions
-): Promise<GenerateDashboardReportResult> {
+): Promise<DailyReportGenerationResult> {
   const now = options.now ?? (() => new Date());
   const generatedAt = now();
   const date = dateKey(generatedAt);
@@ -228,6 +266,7 @@ export async function generateDashboardReport(
   const createProvider = options.createProvider ?? createProviderRegistry().create;
 
   let content: string | null = null;
+  let notice: string | undefined;
 
   if (profile && apiKey && profile.modelName) {
     try {
@@ -240,14 +279,27 @@ export async function generateDashboardReport(
         }),
         events.length + gitActivityCount(codeActivity)
       );
+      if (!content) {
+        notice = unusableAIContentNotice();
+      }
     } catch {
+      notice = aiFailureNotice();
       content = null;
     }
+  } else {
+    notice = missingAISettingsNotice(profile, apiKey) ?? undefined;
   }
 
   const reportContent = content ?? buildFallbackReport(mode, events, codeActivity);
+  if (!content && reportInputCount(mode, events, codeActivity) === 0) {
+    notice = emptyReportInputNotice(mode);
+  }
 
-  return { content: reportContent };
+  return {
+    content: reportContent,
+    source: content ? "ai" : "fallback",
+    ...(notice ? { notice } : {})
+  };
 }
 
 export function saveDashboardReport(options: SaveDashboardReportOptions): SaveDashboardReportResult {

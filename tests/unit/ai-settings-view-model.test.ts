@@ -37,6 +37,12 @@ describe("AI settings view model", () => {
     expect(toConnectionStatusMessage(undefined)).toBe("没有连接到 Electron 主进程，请在桌面应用窗口中测试连接");
   });
 
+  it("explains that a successful connection test does not save changed settings", () => {
+    expect(toConnectionStatusMessage({ ok: true, message: "连接成功。" }, { hasUnsavedChanges: true })).toBe(
+      "连接成功。当前只是测试表单内容，还没有保存设置。请点击保存后再用于生成日报和截图分析。"
+    );
+  });
+
   it("normalizes the configured git search root for code reports", () => {
     const result = normalizeAIProviderSettings({
       providerType: "minimax",

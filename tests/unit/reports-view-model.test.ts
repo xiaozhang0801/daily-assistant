@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { WorkEvent } from "../../src/shared/types";
-import { buildTodayReportView } from "../../src/renderer/pages/reportsViewModel";
+import {
+  buildTodayReportView,
+  toDesktopBridgeUnavailableMessage,
+  toMarkdownExportUnavailableMessage
+} from "../../src/renderer/pages/reportsViewModel";
 
 function event(id: string): WorkEvent {
   return {
@@ -64,5 +68,10 @@ describe("reports view model", () => {
       status: "草稿",
       count: 1
     });
+  });
+
+  it("builds visible messages for unavailable report actions", () => {
+    expect(toDesktopBridgeUnavailableMessage("保存日报")).toBe("没有连接到 Electron 主进程，无法保存日报。");
+    expect(toMarkdownExportUnavailableMessage()).toBe("导出 Markdown 还没有接入文件保存功能，请先使用复制。");
   });
 });

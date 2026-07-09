@@ -9,6 +9,7 @@ defineProps<{
   generating?: boolean;
   saving?: boolean;
   statusMessage?: string;
+  statusTone?: "success" | "warning";
   errorMessage?: string;
 }>();
 
@@ -28,7 +29,9 @@ const emit = defineEmits<{
         <p>日报编辑</p>
         <h2>日报草稿</h2>
         <span v-if="errorMessage" class="panel-message error">{{ errorMessage }}</span>
-        <span v-else-if="statusMessage" class="panel-message">{{ statusMessage }}</span>
+        <span v-else-if="statusMessage" class="panel-message" :class="{ warning: statusTone === 'warning' }">
+          {{ statusMessage }}
+        </span>
       </div>
       <div class="heading-tools">
         <div class="mode-switch" aria-label="日报生成模式">
@@ -129,6 +132,10 @@ const emit = defineEmits<{
 
 .panel-message.error {
   color: var(--danger);
+}
+
+.panel-message.warning {
+  color: var(--warning);
 }
 
 .heading-tools,
