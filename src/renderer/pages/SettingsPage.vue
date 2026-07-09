@@ -99,6 +99,17 @@ onMounted(() => {
       </div>
     </div>
 
+    <section v-if="errors.length || connectionMessage" class="settings-panel feedback-panel">
+      <div class="panel-title">
+        <AlertCircle :size="18" :stroke-width="1.9" />
+        <h2>状态</h2>
+      </div>
+      <ul v-if="errors.length">
+        <li v-for="error in errors" :key="error">{{ error }}</li>
+      </ul>
+      <p v-else>{{ connectionMessage }}</p>
+    </section>
+
     <div class="settings-grid">
       <section class="settings-panel">
         <div class="panel-title">
@@ -192,16 +203,6 @@ onMounted(() => {
         </div>
       </section>
 
-      <section v-if="errors.length || connectionMessage" class="settings-panel wide feedback-panel">
-        <div class="panel-title">
-          <AlertCircle :size="18" :stroke-width="1.9" />
-          <h2>状态</h2>
-        </div>
-        <ul v-if="errors.length">
-          <li v-for="error in errors" :key="error">{{ error }}</li>
-        </ul>
-        <p v-else>{{ connectionMessage }}</p>
-      </section>
     </div>
   </section>
 </template>
@@ -416,6 +417,7 @@ textarea {
 }
 
 .feedback-panel {
+  margin-bottom: 16px;
   border-color: var(--warning);
   background: var(--warning-soft);
 }
