@@ -14,13 +14,39 @@ interface DashboardCaptureControllerOptions {
   scheduler: CaptureSchedulerLike;
   captureNow: () => Promise<CaptureRecord>;
   saveCapture?: (record: CaptureRecord) => void;
-  analyzeCapture?: (record: CaptureRecord) => Promise<WorkEvent | null>;
+  analyzeCapture?: (record: CaptureRecord) => Promise<CaptureAnalysisResult>;
   saveWorkEvent?: (event: WorkEvent) => void | Promise<void>;
   deleteCapture?: (record: CaptureRecord) => void | Promise<void>;
+  markCaptureSkipped?: (record: CaptureRecord, reason: string) => void | Promise<void>;
+  markCaptureFailed?: (record: CaptureRecord, reason: string) => void | Promise<void>;
   startRecordingSession?: (session: { id: string; startedAt: string; endedAt: null }) => void;
   endRecordingSession?: (id: string, endedAt: string) => void;
   getTodaySnapshot?: (state: TodayDashboardState) => TodayDashboardState;
   now?: () => Date;
+}
+
+interface CaptureAnalysisSkip {
+  kind: "skipped";
+  reason: string;
+}
+
+export type CaptureAnalysisResult = WorkEvent | CaptureAnalysisSkip | null;
+
+export function skipCaptureAnalysis(reason: string): CaptureAnalysisSkip {
+  return {
+    kind: "skipped",
+    reason
+  };
+}
+
+function errorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error) return error;
+  return "未知错误";
+}
+
+function isCaptureAnalysisSkip(result: CaptureAnalysisResult | undefined): result is CaptureAnalysisSkip {
+  return Boolean(result && typeof result === "object" && "kind" in result && result.kind === "skipped");
 }
 
 export function createDashboardCaptureController(options: DashboardCaptureControllerOptions) {
@@ -37,11 +63,17 @@ export function createDashboardCaptureController(options: DashboardCaptureContro
       const record = await options.captureNow();
       options.saveCapture?.(record);
       dashboardState.recordCapture();
-      const event = await options.analyzeCapture?.(record);
-      if (event) {
-        await options.saveWorkEvent?.(event);
-        dashboardState.recordEvent(event);
-        await options.deleteCapture?.(record);
+      try {
+        const result = await options.analyzeCapture?.(record);
+        if (isCaptureAnalysisSkip(result)) {
+          await options.markCaptureSkipped?.(record, result.reason);
+        } else if (result) {
+          await options.saveWorkEvent?.(result);
+          dashboardState.recordEvent(result);
+          await options.deleteCapture?.(record);
+        }
+      } catch (error) {
+        await options.markCaptureFailed?.(record, errorMessage(error));
       }
     } catch {
       // Keep recording active. A later scheduler tick can retry capture.

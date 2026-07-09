@@ -8,7 +8,7 @@ import { composeBitmapsHorizontally } from "../services/capture/screenshotCompos
 import { captureScreenshot } from "../services/capture/screenshotCapture";
 import { createCaptureScheduler } from "../services/capture/captureScheduler";
 import type { AppRepositories } from "../services/storage/repositories";
-import { createDashboardCaptureController } from "./dashboardCaptureController";
+import { createDashboardCaptureController, skipCaptureAnalysis, type CaptureAnalysisResult } from "./dashboardCaptureController";
 import { buildDashboardHistory } from "./dashboardHistory";
 import { generateDashboardReport, generateWeeklyReport, saveDashboardReport, saveWeeklyReport } from "./dashboardReport";
 import { createDashboardState } from "./dashboardState";
@@ -67,16 +67,16 @@ function weekRangeFor(date: Date): { weekKey: string; startDate: string; endDate
 function createScreenshotAnalyzer(repositories: AppRepositories) {
   const registry = createProviderRegistry();
 
-  return async (record: CaptureRecord): Promise<WorkEvent | null> => {
+  return async (record: CaptureRecord): Promise<CaptureAnalysisResult> => {
     if (repositories.settings.get("capture.uploadToAIEnabled") !== "true") {
-      return null;
+      return skipCaptureAnalysis("截图 AI 上传未开启，请在设置中开启后再继续记录。");
     }
 
     const profile = repositories.aiProviders.listEnabled()[0];
     const apiKey = repositories.settings.get("ai.apiKey");
-    if (!profile || !apiKey || !profile.modelName) {
-      return null;
-    }
+    if (!profile) return skipCaptureAnalysis("AI 提供方未保存");
+    if (!apiKey) return skipCaptureAnalysis("API Key 未保存");
+    if (!profile.modelName) return skipCaptureAnalysis("模型名称未保存");
 
     const imageBase64 = (await readFile(record.imagePath)).toString("base64");
     const prompt = resolveScreenshotPrompt(repositories.settings.get("prompt.screenshot"));
@@ -91,6 +91,10 @@ function createScreenshotAnalyzer(repositories: AppRepositories) {
       intervalMs: captureIntervalMs(repositories)
     });
   };
+}
+
+function captureAnalysisReason(reason: string): string {
+  return reason.trim() || "未知错误";
 }
 
 async function deleteScreenshotFile(record: CaptureRecord): Promise<void> {
@@ -160,6 +164,18 @@ function createDefaultDashboardController(options: DashboardIpcOptions): Dashboa
     analyzeCapture: createScreenshotAnalyzer(repositories),
     saveWorkEvent: (event) => repositories.workEvents.save(event),
     deleteCapture: deleteScreenshotFile,
+    markCaptureSkipped: (record, reason) =>
+      repositories.captures.save({
+        ...record,
+        status: "skipped",
+        skipReason: captureAnalysisReason(reason)
+      }),
+    markCaptureFailed: (record, reason) =>
+      repositories.captures.save({
+        ...record,
+        status: "failed",
+        skipReason: captureAnalysisReason(reason)
+      }),
     startRecordingSession: (session) => repositories.recordingSessions.save(session),
     endRecordingSession: (id, endedAt) => repositories.recordingSessions.end(id, endedAt),
     getTodaySnapshot: (state) => summaryProvider.getToday(state)

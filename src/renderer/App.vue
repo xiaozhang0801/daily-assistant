@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { isAppUpdateFeatureEnabled } from "../shared/types/updater";
 import AppSidebar from "./components/AppSidebar.vue";
 import HistoryPage from "./pages/HistoryPage.vue";
 import ReportsPage from "./pages/ReportsPage.vue";
@@ -8,12 +9,18 @@ import TimelinePage from "./pages/TimelinePage.vue";
 import TodayPage from "./pages/TodayPage.vue";
 
 const activePage = ref("today");
+const updatesEnabled = isAppUpdateFeatureEnabled(import.meta.env.VITE_ENABLE_APP_UPDATE);
 const activeComponent = computed(() => {
   if (activePage.value === "timeline") return TimelinePage;
   if (activePage.value === "reports") return ReportsPage;
   if (activePage.value === "history") return HistoryPage;
   if (activePage.value === "settings") return SettingsPage;
   return TodayPage;
+});
+
+onMounted(() => {
+  if (!updatesEnabled) return;
+  void window.dailyAssistant?.updater?.checkForUpdates({ automatic: true });
 });
 </script>
 

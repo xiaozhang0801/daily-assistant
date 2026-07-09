@@ -4,6 +4,8 @@ export interface TodayDashboardState {
   recording: boolean;
   capturedDurationMinutes: number;
   analyzedEventCount: number;
+  captureAnalysisWarningCount: number;
+  latestCaptureAnalysisWarningMessage: string;
   providerStatus: string;
   events: WorkEvent[];
   reportDraft: string;
@@ -20,6 +22,8 @@ export function createDashboardState(initial?: Partial<TodayDashboardState>) {
     recording: false,
     capturedDurationMinutes: 0,
     analyzedEventCount: 0,
+    captureAnalysisWarningCount: 0,
+    latestCaptureAnalysisWarningMessage: "",
     providerStatus: "not_configured",
     events: [],
     reportDraft: "",

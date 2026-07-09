@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from "vue";
-import { AlertCircle, Bot, GitBranch, KeyRound, Save, SlidersHorizontal, TestTube } from "lucide-vue-next";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { AlertCircle, Bot, GitBranch, KeyRound, Power, RefreshCw, Save, SlidersHorizontal, TestTube } from "lucide-vue-next";
 import { defaultDailyReportPrompt, defaultScreenshotPrompt } from "../../main/services/ai/prompts";
+import { isAppUpdateFeatureEnabled } from "../../shared/types/updater";
+import type { AppUpdateStatus } from "../../shared/types/updater";
 import { normalizeAIProviderSettings, toConnectionStatusMessage } from "./settingsViewModel";
 
 interface SettingsState {
@@ -35,6 +37,19 @@ const errors = ref<string[]>([]);
 const connectionMessage = ref("");
 const settingsDirty = ref(false);
 const settingsLoaded = ref(false);
+const updatesEnabled = isAppUpdateFeatureEnabled(import.meta.env.VITE_ENABLE_APP_UPDATE);
+const updateStatus = ref<AppUpdateStatus>({
+  phase: "idle",
+  currentVersion: "未知",
+  message: "尚未检查更新。"
+});
+const updateBusy = computed(() => updateStatus.value.phase === "checking" || updateStatus.value.phase === "downloading");
+const updateButtonText = computed(() => {
+  if (updateStatus.value.phase === "checking") return "检查中";
+  if (updateStatus.value.phase === "downloading") return "下载中";
+  return "检查更新";
+});
+let stopListeningForUpdates: (() => void) | undefined;
 
 async function loadSettings(): Promise<void> {
   settingsLoaded.value = false;
@@ -94,8 +109,75 @@ async function testConnection(): Promise<void> {
   }
 }
 
+function setUpdaterUnavailable(message: string): void {
+  updateStatus.value = {
+    phase: "error",
+    currentVersion: updateStatus.value.currentVersion,
+    message,
+    error: message
+  };
+}
+
+async function loadUpdateStatus(): Promise<void> {
+  const bridge = window.dailyAssistant?.updater;
+  if (!bridge) {
+    setUpdaterUnavailable("没有连接到 Electron 主进程，无法检查更新。");
+    return;
+  }
+
+  try {
+    updateStatus.value = await bridge.getStatus();
+  } catch (error) {
+    setUpdaterUnavailable(error instanceof Error ? error.message : "读取更新状态失败");
+  }
+}
+
+async function checkForUpdates(): Promise<void> {
+  const bridge = window.dailyAssistant?.updater;
+  if (!bridge) {
+    setUpdaterUnavailable("没有连接到 Electron 主进程，无法检查更新。");
+    return;
+  }
+
+  try {
+    updateStatus.value = await bridge.checkForUpdates();
+  } catch (error) {
+    setUpdaterUnavailable(error instanceof Error ? error.message : "检查更新失败");
+  }
+}
+
+async function quitAndInstall(): Promise<void> {
+  const bridge = window.dailyAssistant?.updater;
+  if (!bridge) {
+    setUpdaterUnavailable("没有连接到 Electron 主进程，无法安装更新。");
+    return;
+  }
+
+  try {
+    updateStatus.value = await bridge.quitAndInstall();
+  } catch (error) {
+    setUpdaterUnavailable(error instanceof Error ? error.message : "安装更新失败");
+  }
+}
+
 onMounted(() => {
   void loadSettings();
+  if (!updatesEnabled) return;
+
+  const bridge = window.dailyAssistant?.updater;
+  if (!bridge) {
+    setUpdaterUnavailable("没有连接到 Electron 主进程，无法检查更新。");
+    return;
+  }
+
+  stopListeningForUpdates = bridge.onStatus((status) => {
+    updateStatus.value = status;
+  });
+  void loadUpdateStatus();
+});
+
+onUnmounted(() => {
+  stopListeningForUpdates?.();
 });
 
 watch(
@@ -218,6 +300,48 @@ watch(
         </label>
       </section>
 
+      <section v-if="updatesEnabled" class="settings-panel">
+        <div class="panel-title">
+          <RefreshCw :size="18" :stroke-width="1.9" />
+          <h2>应用更新</h2>
+        </div>
+
+        <div class="update-row">
+          <span>当前版本</span>
+          <strong>{{ updateStatus.currentVersion }}</strong>
+        </div>
+        <p class="update-message" :class="{ danger: updateStatus.phase === 'error' }">{{ updateStatus.message }}</p>
+        <progress
+          v-if="updateStatus.phase === 'downloading'"
+          class="update-progress"
+          :value="updateStatus.percent ?? 0"
+          max="100"
+        ></progress>
+
+        <div class="update-actions">
+          <button
+            class="test-button"
+            type="button"
+            title="检查更新"
+            :disabled="updateBusy"
+            @click="checkForUpdates"
+          >
+            <RefreshCw :size="16" :stroke-width="1.9" />
+            <span>{{ updateButtonText }}</span>
+          </button>
+          <button
+            v-if="updateStatus.phase === 'downloaded'"
+            class="save-button"
+            type="button"
+            title="立即重启安装"
+            @click="quitAndInstall"
+          >
+            <Power :size="16" :stroke-width="1.9" />
+            <span>立即重启安装</span>
+          </button>
+        </div>
+      </section>
+
       <section class="settings-panel wide">
         <div class="panel-title">
           <KeyRound :size="18" :stroke-width="1.9" />
@@ -314,6 +438,11 @@ watch(
 .test-button:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.test-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
 }
 
 .save-button:hover {
@@ -508,5 +637,50 @@ textarea {
   background: var(--accent-soft);
   color: var(--accent);
   font-size: 12px;
+}
+
+.update-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: var(--surface-muted);
+}
+
+.update-row span,
+.update-message {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.update-row strong {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.update-message {
+  margin: 12px 0 0;
+  line-height: 1.55;
+}
+
+.update-message.danger {
+  color: var(--danger);
+}
+
+.update-progress {
+  width: 100%;
+  height: 8px;
+  margin-top: 12px;
+  accent-color: var(--accent);
+}
+
+.update-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
 }
 </style>

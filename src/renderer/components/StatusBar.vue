@@ -16,6 +16,7 @@ const emit = defineEmits<{
 
 const providerText = computed(() => {
   if (props.providerStatus === "not_configured") return "AI 未配置";
+  if (props.providerStatus === "upload_disabled") return "AI 上传关闭";
   if (props.providerStatus === "ready") return "AI 就绪";
   return props.providerStatus;
 });
@@ -35,7 +36,10 @@ const providerText = computed(() => {
       </span>
       <span class="metric">{{ duration }} 分钟</span>
       <span class="metric">{{ eventCount }} 个事件</span>
-      <span class="metric provider-metric" :class="{ ready: providerStatus === 'ready', warning: providerStatus === 'not_configured' }">
+      <span
+        class="metric provider-metric"
+        :class="{ ready: providerStatus === 'ready', warning: providerStatus === 'not_configured' || providerStatus === 'upload_disabled' }"
+      >
         <Bot :size="16" :stroke-width="1.9" />
         {{ providerText }}
       </span>

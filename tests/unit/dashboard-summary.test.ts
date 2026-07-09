@@ -42,6 +42,7 @@ function createRepositoryStub(
     ["ai.baseUrl", "https://api.example.com/v1"],
     ["ai.apiKey", "test-key"],
     ["ai.modelName", "MiniMax-M3"],
+    ["capture.uploadToAIEnabled", "true"],
     ["capture.intervalMinutes", "5"]
   ]);
 
@@ -134,6 +135,26 @@ describe("dashboard summary provider", () => {
     expect(summary.getToday(state.getToday()).reportSaved).toBe(true);
   });
 
+  it("reports upload-disabled status when AI is configured but screenshot upload is off", () => {
+    const repositories = createRepositoryStub();
+    vi.mocked(repositories.settings.get).mockImplementation((key: string) => {
+      if (key === "capture.uploadToAIEnabled") return "false";
+      const values: Record<string, string> = {
+        "ai.apiKey": "test-key",
+        "ai.modelName": "MiniMax-M3",
+        "capture.intervalMinutes": "5"
+      };
+      return values[key] ?? null;
+    });
+    const state = createDashboardState();
+    const summary = createDashboardSummaryProvider({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z")
+    });
+
+    expect(summary.getToday(state.getToday()).providerStatus).toBe("upload_disabled");
+  });
+
   it("normalizes legacy point-in-time work events into capture interval ranges", () => {
     const repositories = createRepositoryStub();
     const state = createDashboardState();
@@ -213,5 +234,33 @@ describe("dashboard summary provider", () => {
     });
 
     expect(summary.getToday(state.getToday()).capturedDurationMinutes).toBe(10);
+  });
+
+  it("summarizes captures without analysis results for visible feedback", () => {
+    const skippedCapture: CaptureRecord = {
+      ...captureRecord,
+      id: "capture-skipped",
+      capturedAt: "2026-07-08T09:30:00.000Z",
+      status: "skipped",
+      skipReason: "API Key 未保存"
+    };
+    const failedCapture: CaptureRecord = {
+      ...captureRecord,
+      id: "capture-failed",
+      capturedAt: "2026-07-08T09:40:00.000Z",
+      status: "failed",
+      skipReason: "模型接口请求失败"
+    };
+    const repositories = createRepositoryStub([], [], [captureRecord, skippedCapture, failedCapture]);
+    const state = createDashboardState();
+    const summary = createDashboardSummaryProvider({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z")
+    });
+
+    expect(summary.getToday(state.getToday())).toMatchObject({
+      captureAnalysisWarningCount: 2,
+      latestCaptureAnalysisWarningMessage: "模型接口请求失败"
+    });
   });
 });

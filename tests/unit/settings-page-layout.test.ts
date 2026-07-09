@@ -26,4 +26,15 @@ describe("Settings page layout", () => {
     expect(template).toContain("可以填写总根目录，也可以填写具体项目目录");
     expect(template).toContain("代码日报会在这个范围内搜索 Git 仓库");
   });
+
+  it("renders the gated app update controls", () => {
+    const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+    const source = readFileSync(resolve(root, "src/renderer/pages/SettingsPage.vue"), "utf8");
+    const template = parse(source).descriptor.template?.content ?? "";
+
+    expect(source).toContain("VITE_ENABLE_APP_UPDATE");
+    expect(template).toContain("应用更新");
+    expect(template).toContain("检查更新");
+    expect(template).toContain("立即重启安装");
+  });
 });

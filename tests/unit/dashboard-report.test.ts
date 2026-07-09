@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { AppRepositories } from "../../src/main/services/storage/repositories";
 import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "../../src/main/services/ai/provider";
-import type { AIProviderProfile, WorkEvent, WorkEventDraft } from "../../src/shared/types";
+import type { AIProviderProfile, CaptureRecord, WorkEvent, WorkEventDraft } from "../../src/shared/types";
 import {
   generateDashboardReport,
   generateWeeklyReport,
@@ -25,7 +25,8 @@ const workEvent: WorkEvent = {
 function createRepositoryStub(
   enabledProvider?: AIProviderProfile,
   settingOverrides: Record<string, string> = {},
-  workEvents: WorkEvent[] = [workEvent]
+  workEvents: WorkEvent[] = [workEvent],
+  captures: CaptureRecord[] = []
 ): AppRepositories {
   const settings = new Map<string, string>([
     ["ai.apiKey", enabledProvider ? "api-key" : ""],
@@ -36,7 +37,7 @@ function createRepositoryStub(
   return {
     captures: {
       save: vi.fn(),
-      listByDate: vi.fn(() => [])
+      listByDate: vi.fn(() => captures)
     },
     workEvents: {
       save: vi.fn(),
@@ -152,6 +153,27 @@ describe("dashboard report generation", () => {
     expect(result.notice).toContain("AI 生成失败");
     expect(result.notice).toContain("已使用本地记录生成基础日报");
     expect(result.content).toContain("Implemented realtime dashboard refresh");
+  });
+
+  it("warns when today's report is generated with screenshots that have no analysis result", async () => {
+    const skippedCapture: CaptureRecord = {
+      id: "capture-skipped",
+      capturedAt: "2026-07-08T09:30:00.000Z",
+      imagePath: "C:/tmp/capture-skipped.png",
+      activeApp: null,
+      windowTitle: null,
+      status: "skipped",
+      skipReason: "API Key 未保存"
+    };
+    const repositories = createRepositoryStub(undefined, {}, [workEvent], [skippedCapture]);
+
+    const result = await generateDashboardReport({
+      repositories,
+      now: () => new Date("2026-07-08T10:00:00.000Z")
+    });
+
+    expect(result.notice).toContain("有 1 张截图没有生成 AI 分析结果，本次日报可能不完整");
+    expect(result.notice).toContain("API Key 未保存");
   });
 
   it("falls back to an event-based report when AI returns only a completion status", async () => {

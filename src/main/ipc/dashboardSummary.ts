@@ -18,8 +18,10 @@ function resolveProviderStatus(repositories: AppRepositories): string {
   const enabledProvider = repositories.aiProviders.listEnabled()[0];
   const apiKey = repositories.settings.get("ai.apiKey");
   const modelName = repositories.settings.get("ai.modelName") || enabledProvider?.modelName;
+  const uploadToAIEnabled = repositories.settings.get("capture.uploadToAIEnabled") === "true";
 
-  return enabledProvider && apiKey && modelName ? "ready" : "not_configured";
+  if (!enabledProvider || !apiKey || !modelName) return "not_configured";
+  return uploadToAIEnabled ? "ready" : "upload_disabled";
 }
 
 function captureIntervalMs(repositories: AppRepositories): number {
@@ -57,6 +59,19 @@ function durationReferenceTime(
   return latestOpenSessionStart !== null ? new Date(latestOpenSessionStart) : now;
 }
 
+function isCaptureAnalysisWarning(capture: CaptureRecord): boolean {
+  return capture.status === "failed" || capture.status === "skipped";
+}
+
+function latestCaptureAnalysisWarning(captures: CaptureRecord[]): CaptureRecord | null {
+  const warningCaptures = captures.filter(isCaptureAnalysisWarning);
+  if (warningCaptures.length === 0) return null;
+
+  return [...warningCaptures].sort(
+    (left, right) => Date.parse(right.capturedAt) - Date.parse(left.capturedAt)
+  )[0];
+}
+
 export function createDashboardSummaryProvider(options: DashboardSummaryProviderOptions) {
   const now = options.now ?? (() => new Date());
 
@@ -66,6 +81,8 @@ export function createDashboardSummaryProvider(options: DashboardSummaryProvider
       const currentTime = now();
       const sessions = options.repositories.recordingSessions.listByDate(today);
       const captures = options.repositories.captures.listByDate(today);
+      const analysisWarningCaptures = captures.filter(isCaptureAnalysisWarning);
+      const latestAnalysisWarning = latestCaptureAnalysisWarning(captures);
       const intervalMs = captureIntervalMs(options.repositories);
       const events = mergeSimilarWorkEvents(
         options.repositories.workEvents.listByDate(today).map((event) => normalizePointInTimeEvent(event, intervalMs)),
@@ -85,6 +102,8 @@ export function createDashboardSummaryProvider(options: DashboardSummaryProvider
         ...baseState,
         capturedDurationMinutes: durationMinutes,
         analyzedEventCount: events.length,
+        captureAnalysisWarningCount: analysisWarningCaptures.length,
+        latestCaptureAnalysisWarningMessage: latestAnalysisWarning?.skipReason ?? "",
         providerStatus: resolveProviderStatus(options.repositories),
         events,
         reportDraft: savedReport?.content ?? baseState.reportDraft,

@@ -155,6 +155,51 @@ describe("dashboard capture controller", () => {
     expect(deleteCapture).not.toHaveBeenCalled();
   });
 
+  it("marks the capture as skipped when screenshot analysis is intentionally skipped", async () => {
+    const scheduler = createSchedulerStub();
+    const captureRecord = createCaptureRecord();
+    const markCaptureSkipped = vi.fn();
+    const saveWorkEvent = vi.fn();
+    const deleteCapture = vi.fn();
+    const controller = createDashboardCaptureController({
+      scheduler,
+      captureNow: vi.fn().mockResolvedValue(captureRecord),
+      saveCapture: vi.fn(),
+      analyzeCapture: vi.fn().mockResolvedValue({ kind: "skipped", reason: "API Key 未保存" }),
+      saveWorkEvent,
+      deleteCapture,
+      markCaptureSkipped
+    });
+
+    await controller.resumeCapture();
+
+    expect(markCaptureSkipped).toHaveBeenCalledWith(captureRecord, "API Key 未保存");
+    expect(saveWorkEvent).not.toHaveBeenCalled();
+    expect(deleteCapture).not.toHaveBeenCalled();
+  });
+
+  it("marks the capture as failed when screenshot analysis throws", async () => {
+    const scheduler = createSchedulerStub();
+    const captureRecord = createCaptureRecord();
+    const markCaptureFailed = vi.fn();
+    const deleteCapture = vi.fn();
+    const controller = createDashboardCaptureController({
+      scheduler,
+      captureNow: vi.fn().mockResolvedValue(captureRecord),
+      saveCapture: vi.fn(),
+      analyzeCapture: vi.fn().mockRejectedValue(new Error("模型接口请求失败")),
+      saveWorkEvent: vi.fn(),
+      deleteCapture,
+      markCaptureFailed
+    });
+
+    await controller.resumeCapture();
+
+    expect(markCaptureFailed).toHaveBeenCalledWith(captureRecord, "模型接口请求失败");
+    expect(deleteCapture).not.toHaveBeenCalled();
+    expect(controller.getToday().recording).toBe(true);
+  });
+
   it("saves, analyzes, stores an event, and deletes one combined screen capture in one cycle", async () => {
     const scheduler = createSchedulerStub();
     const captureRecord = createCaptureRecord("combined-screen");

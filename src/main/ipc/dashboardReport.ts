@@ -174,6 +174,27 @@ function emptyReportInputNotice(mode: ReportGenerationMode): string {
   return "当前没有可用于生成日报的记录。请先继续记录一段时间，并确认设置里的 AI 配置已保存。";
 }
 
+function captureAnalysisReasonMessage(reason: string | null): string {
+  return reason?.replace(/^截图 AI (?:分析失败|分析已跳过)：?/, "").trim() ?? "";
+}
+
+function captureAnalysisNotice(captures: ReturnType<AppRepositories["captures"]["listByDate"]>): string | null {
+  const warningCaptures = captures.filter((capture) => capture.status === "failed" || capture.status === "skipped");
+  if (warningCaptures.length === 0) return null;
+
+  const latestWarning = [...warningCaptures].sort(
+    (left, right) => Date.parse(right.capturedAt) - Date.parse(left.capturedAt)
+  )[0];
+  const reason = captureAnalysisReasonMessage(latestWarning.skipReason);
+  const reasonMessage = reason ? `最近原因：${reason}` : "请检查 AI 设置和网络后重试。";
+  return `有 ${warningCaptures.length} 张截图没有生成 AI 分析结果，本次日报可能不完整。${reasonMessage}`;
+}
+
+function appendNotice(existing: string | undefined, addition: string | null): string | undefined {
+  if (!addition) return existing;
+  return existing ? `${existing} ${addition}` : addition;
+}
+
 function gitSearchRootFromSettings(repositories: AppRepositories): string | null {
   const root = repositories.settings.get("git.searchRoot")?.trim() ?? "";
   return root.length > 0 ? root : null;
@@ -256,6 +277,7 @@ export async function generateDashboardReport(
   const date = dateKey(generatedAt);
   const mode = normalizeReportGenerationMode(options.mode);
   const intervalMs = captureIntervalMs(options.repositories);
+  const captures = mode === "code" ? [] : options.repositories.captures.listByDate(date);
   const events = mergeSimilarWorkEvents(options.repositories.workEvents.listByDate(date), { maxGapMs: intervalMs * 2 });
   const codeActivity =
     mode === "work"
@@ -294,6 +316,7 @@ export async function generateDashboardReport(
   if (!content && reportInputCount(mode, events, codeActivity) === 0) {
     notice = emptyReportInputNotice(mode);
   }
+  notice = appendNotice(notice, captureAnalysisNotice(captures));
 
   return {
     content: reportContent,

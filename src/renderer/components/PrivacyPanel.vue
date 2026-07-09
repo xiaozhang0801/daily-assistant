@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import { Bot, Camera, LockKeyhole, ShieldCheck } from "lucide-vue-next";
 
-defineProps<{
+const props = defineProps<{
   providerStatus: string;
 }>();
+
+const providerText = computed(() => {
+  if (props.providerStatus === "not_configured") return "AI 未配置";
+  if (props.providerStatus === "upload_disabled") return "AI 上传关闭";
+  return "AI 可用";
+});
 </script>
 
 <template>
@@ -31,7 +38,7 @@ defineProps<{
       <div class="privacy-item warning">
         <Bot :size="18" :stroke-width="1.9" />
         <div>
-          <strong>{{ providerStatus === "not_configured" ? "AI 未配置" : "AI 可用" }}</strong>
+          <strong>{{ providerText }}</strong>
           <span>上传分析需在设置中开启。</span>
         </div>
       </div>

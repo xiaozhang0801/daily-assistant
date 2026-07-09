@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { GenerateReportRequest } from "../shared/types";
-import { dashboardChannels, settingsChannels } from "../shared/types/ipc";
+import type { IpcRendererEvent } from "electron";
+import type { AppUpdateStatus, CheckForUpdatesRequest, GenerateReportRequest } from "../shared/types";
+import { dashboardChannels, settingsChannels, updaterChannels } from "../shared/types/ipc";
 
 contextBridge.exposeInMainWorld("dailyAssistant", {
   dashboard: {
@@ -17,5 +18,15 @@ contextBridge.exposeInMainWorld("dailyAssistant", {
     get: () => ipcRenderer.invoke(settingsChannels.get),
     save: (settings: unknown) => ipcRenderer.invoke(settingsChannels.save, settings),
     testAIProvider: (settings: unknown) => ipcRenderer.invoke(settingsChannels.testAIProvider, settings)
+  },
+  updater: {
+    getStatus: () => ipcRenderer.invoke(updaterChannels.getStatus),
+    checkForUpdates: (request?: CheckForUpdatesRequest) => ipcRenderer.invoke(updaterChannels.checkForUpdates, request),
+    quitAndInstall: () => ipcRenderer.invoke(updaterChannels.quitAndInstall),
+    onStatus: (listener: (status: AppUpdateStatus) => void) => {
+      const handler = (_event: IpcRendererEvent, status: AppUpdateStatus) => listener(status);
+      ipcRenderer.on(updaterChannels.status, handler);
+      return () => ipcRenderer.removeListener(updaterChannels.status, handler);
+    }
   }
 });

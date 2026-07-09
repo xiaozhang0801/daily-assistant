@@ -8,6 +8,8 @@ declare global {
           recording: boolean;
           capturedDurationMinutes: number;
           analyzedEventCount: number;
+          captureAnalysisWarningCount: number;
+          latestCaptureAnalysisWarningMessage: string;
           providerStatus: string;
           events: import("../../shared/types").WorkEvent[];
           reportDraft: string;
@@ -27,6 +29,14 @@ declare global {
         get: () => Promise<unknown>;
         save: (settings: unknown) => Promise<{ ok: boolean; settings: unknown }>;
         testAIProvider: (settings: unknown) => Promise<{ ok: boolean; message: string }>;
+      };
+      updater: {
+        getStatus: () => Promise<import("../../shared/types").AppUpdateStatus>;
+        checkForUpdates: (
+          request?: import("../../shared/types").CheckForUpdatesRequest
+        ) => Promise<import("../../shared/types").AppUpdateStatus>;
+        quitAndInstall: () => Promise<import("../../shared/types").AppUpdateStatus>;
+        onStatus: (listener: (status: import("../../shared/types").AppUpdateStatus) => void) => () => void;
       };
     };
   }

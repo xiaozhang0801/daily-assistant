@@ -1,6 +1,6 @@
 {
   "name": "daily-assistant",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Personal desktop daily report assistant.",
   "private": true,
   "type": "module",
@@ -8,13 +8,14 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "vue-tsc --noEmit && electron-vite build",
-    "dist:win": "npm run build && electron-builder --win nsis",
+    "dist:win": "set \"ELECTRON_MIRROR=https://npmmirror.com/mirrors/electron/\" && set \"ELECTRON_BUILDER_BINARIES_MIRROR=https://npmmirror.com/mirrors/electron-builder-binaries/\" && npm run build && electron-builder --win nsis",
     "test": "vue-tsc --noEmit && vitest run --config vitest.config.ts",
     "test:watch": "vitest",
     "lint": "vue-tsc --noEmit"
   },
   "dependencies": {
     "better-sqlite3": "^12.11.1",
+    "electron-updater": "^6.8.9",
     "lucide-vue-next": "^1.0.0",
     "vue": "^3.5.39"
   },
@@ -37,6 +38,12 @@
     "directories": {
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "http://192.168.19.220/daily-assistant/releases/"
+      }
+    ],
     "files": [
       "out/**/*",
       "package.json"

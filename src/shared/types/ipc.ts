@@ -14,3 +14,10 @@ export const settingsChannels = {
   save: "settings:save",
   testAIProvider: "settings:testAIProvider"
 } as const;
+
+export const updaterChannels = {
+  getStatus: "updater:getStatus",
+  checkForUpdates: "updater:checkForUpdates",
+  quitAndInstall: "updater:quitAndInstall",
+  status: "updater:status"
+} as const;

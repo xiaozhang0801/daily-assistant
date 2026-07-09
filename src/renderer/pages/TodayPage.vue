@@ -7,12 +7,19 @@ import ReportEditor from "../components/ReportEditor.vue";
 import StatusBar from "../components/StatusBar.vue";
 import TimelineList from "../components/TimelineList.vue";
 import { defaultReportGenerationMode } from "./reportModeViewModel";
-import { todayRefreshIntervalMs, toReportGenerationStatusMessage, toResumeCaptureStatusMessage } from "./todayViewModel";
+import {
+  todayRefreshIntervalMs,
+  toCaptureAnalysisWarningMessage,
+  toReportGenerationStatusMessage,
+  toResumeCaptureStatusMessage
+} from "./todayViewModel";
 
 interface TodayState {
   recording: boolean;
   capturedDurationMinutes: number;
   analyzedEventCount: number;
+  captureAnalysisWarningCount: number;
+  latestCaptureAnalysisWarningMessage: string;
   providerStatus: string;
   events: WorkEvent[];
   reportSaved: boolean;
@@ -23,6 +30,8 @@ const state = ref<TodayState>({
   recording: false,
   capturedDurationMinutes: 0,
   analyzedEventCount: 0,
+  captureAnalysisWarningCount: 0,
+  latestCaptureAnalysisWarningMessage: "",
   providerStatus: "not_configured",
   events: [],
   reportSaved: false
@@ -45,6 +54,10 @@ const latestActivity = computed(() => {
   const last = state.value.events.at(-1);
   return last?.title ?? "等待今日记录";
 });
+
+const captureAnalysisWarning = computed(() =>
+  toCaptureAnalysisWarningMessage(state.value.captureAnalysisWarningCount, state.value.latestCaptureAnalysisWarningMessage)
+);
 
 const overview = computed(() => [
   {
@@ -89,6 +102,8 @@ async function loadToday(preserveReportDraft = false): Promise<void> {
       recording: today.recording,
       capturedDurationMinutes: today.capturedDurationMinutes,
       analyzedEventCount: today.analyzedEventCount,
+      captureAnalysisWarningCount: today.captureAnalysisWarningCount,
+      latestCaptureAnalysisWarningMessage: today.latestCaptureAnalysisWarningMessage,
       providerStatus: today.providerStatus,
       events: today.events,
       reportSaved: today.reportSaved
@@ -246,6 +261,11 @@ onBeforeUnmount(() => {
     <div v-if="operationMessage" class="operation-banner" :class="operationTone">
       <AlertCircle :size="16" :stroke-width="1.9" />
       <span>{{ operationMessage }}</span>
+    </div>
+
+    <div v-if="captureAnalysisWarning" class="operation-banner warning">
+      <AlertCircle :size="16" :stroke-width="1.9" />
+      <span>{{ captureAnalysisWarning }}</span>
     </div>
 
     <div class="today-content">
