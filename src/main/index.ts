@@ -6,6 +6,10 @@ import { resolvePreloadPath } from "./preloadPath";
 import { createDatabase } from "./services/storage/database";
 import { createRepositories } from "./services/storage/repositories";
 
+function resolveWindowIconPath(): string {
+  return app.isPackaged ? join(process.resourcesPath, "icon.ico") : join(process.cwd(), "build", "icon.ico");
+}
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1220,
@@ -15,6 +19,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     backgroundColor: "#f4f7fb",
+    icon: resolveWindowIconPath(),
     webPreferences: {
       preload: resolvePreloadPath(__dirname),
       sandbox: false,
