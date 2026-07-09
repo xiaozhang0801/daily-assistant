@@ -133,33 +133,41 @@ function toProviderProfile(settings: AISettingsPayload): AIProviderProfile {
 }
 
 function saveSettings(repositories: AppRepositories | undefined, settings: AISettingsPayload): void {
-  memorySettings = settings;
+  const normalizedSettings =
+    settings.providerType === "minimax"
+      ? {
+          ...settings,
+          baseUrl: ""
+        }
+      : settings;
+
+  memorySettings = normalizedSettings;
   if (!repositories) return;
 
-  repositories.settings.set("ai.providerType", settings.providerType);
-  repositories.settings.set("ai.baseUrl", settings.baseUrl);
-  repositories.settings.set("ai.apiKey", settings.apiKey);
-  repositories.settings.set("ai.modelName", settings.modelName);
-  repositories.settings.set("ai.customHeaders", JSON.stringify(settings.customHeaders));
-  repositories.settings.set("ai.customHeadersText", settings.customHeadersText);
-  repositories.settings.set("prompt.screenshot", settings.screenshotPrompt);
-  repositories.settings.set("prompt.dailyReport", settings.dailyReportPrompt);
-  repositories.settings.set("capture.uploadToAIEnabled", String(settings.uploadToAIEnabled));
-  repositories.settings.set("capture.intervalMinutes", String(settings.captureIntervalMinutes));
-  repositories.settings.set("git.searchRoot", settings.gitSearchRoot);
-  repositories.aiProviders.save(toProviderProfile(settings));
+  repositories.settings.set("ai.providerType", normalizedSettings.providerType);
+  repositories.settings.set("ai.baseUrl", normalizedSettings.baseUrl);
+  repositories.settings.set("ai.apiKey", normalizedSettings.apiKey);
+  repositories.settings.set("ai.modelName", normalizedSettings.modelName);
+  repositories.settings.set("ai.customHeaders", JSON.stringify(normalizedSettings.customHeaders));
+  repositories.settings.set("ai.customHeadersText", normalizedSettings.customHeadersText);
+  repositories.settings.set("prompt.screenshot", normalizedSettings.screenshotPrompt);
+  repositories.settings.set("prompt.dailyReport", normalizedSettings.dailyReportPrompt);
+  repositories.settings.set("capture.uploadToAIEnabled", String(normalizedSettings.uploadToAIEnabled));
+  repositories.settings.set("capture.intervalMinutes", String(normalizedSettings.captureIntervalMinutes));
+  repositories.settings.set("git.searchRoot", normalizedSettings.gitSearchRoot);
+  repositories.aiProviders.save(toProviderProfile(normalizedSettings));
   repositories.promptTemplates.save({
     id: "default-screenshot-analysis",
     name: "截图分析",
     purpose: "screenshot_analysis",
-    content: settings.screenshotPrompt,
+    content: normalizedSettings.screenshotPrompt,
     isDefault: true
   });
   repositories.promptTemplates.save({
     id: "default-daily-report",
     name: "日报生成",
     purpose: "daily_report",
-    content: settings.dailyReportPrompt,
+    content: normalizedSettings.dailyReportPrompt,
     isDefault: true
   });
 }

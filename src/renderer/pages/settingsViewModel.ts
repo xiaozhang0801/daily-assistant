@@ -62,7 +62,7 @@ export function normalizeAIProviderSettings(input: AIProviderSettingsInput): {
 } {
   const errors: string[] = [];
   const providerType = input.providerType;
-  const baseUrl = input.baseUrl.trim();
+  const baseUrl = providerType === "minimax" ? "" : input.baseUrl.trim();
   const apiKey = input.apiKey.trim();
   const modelName = input.modelName.trim();
   const customHeadersText = input.customHeadersText?.trim() ?? "";

@@ -22,6 +22,17 @@ describe("AI settings view model", () => {
     ).toContain("自定义兼容接口需要填写 Base URL");
   });
 
+  it("clears stale custom base URL values when MiniMax is selected", () => {
+    const result = normalizeAIProviderSettings({
+      providerType: "minimax",
+      baseUrl: "  http://192.168.19.232:48760/v1  ",
+      apiKey: "key",
+      modelName: "model"
+    });
+
+    expect(result.value.baseUrl).toBe("");
+  });
+
   it("shows a clear message when Electron bridge returns no connection status", () => {
     expect(toConnectionStatusMessage(undefined)).toBe("没有连接到 Electron 主进程，请在桌面应用窗口中测试连接");
   });

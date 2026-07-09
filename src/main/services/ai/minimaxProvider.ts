@@ -1,19 +1,163 @@
-import type { AIProviderProfile } from "../../../shared/types";
-import type { AIProvider } from "./provider";
-import { createOpenAICompatibleProvider } from "./openaiCompatibleProvider";
+import type { AIProviderProfile, ProviderStatus, WorkEventDraft } from "../../../shared/types";
+import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "./provider";
 
-export const minimaxDefaultBaseUrl = "https://api.minimaxi.com/v1";
+export const minimaxDefaultBaseUrl = "https://api.minimaxi.com/anthropic";
+const anthropicVersion = "2023-06-01";
+
+type FetchLike = typeof fetch;
+
+interface AnthropicMessageResponse {
+  content: Array<{
+    type: string;
+    text?: string;
+  }>;
+}
+
+interface AnthropicMessageRequest {
+  model: string;
+  messages: unknown[];
+  max_tokens?: number;
+}
+
+function messagesEndpoint(baseUrl: string): string {
+  return `${baseUrl.replace(/\/$/, "")}/v1/messages`;
+}
+
+function connectionStatusFromHttpStatus(status: number): ProviderStatus {
+  if (status === 401 || status === 403) {
+    return { ok: false, message: "API Key 无效或无权限。" };
+  }
+
+  if (status === 404) {
+    return { ok: false, message: "接口地址或模型不存在。" };
+  }
+
+  if (status === 429) {
+    return { ok: false, message: "请求过于频繁或额度受限。" };
+  }
+
+  return { ok: false, message: `连接失败：接口返回 HTTP ${status}。` };
+}
+
+function extractText(payload: AnthropicMessageResponse): string {
+  return payload.content
+    .filter((item) => item.type === "text" && typeof item.text === "string")
+    .map((item) => item.text)
+    .join("");
+}
+
+function normalizeJsonContent(content: string): string {
+  const trimmed = content.trim();
+  const fencedJson = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+  const candidate = fencedJson ? fencedJson[1].trim() : trimmed;
+
+  if (candidate.startsWith("{")) {
+    return candidate;
+  }
+
+  const start = candidate.indexOf("{");
+  const end = candidate.lastIndexOf("}");
+  return start >= 0 && end > start ? candidate.slice(start, end + 1) : candidate;
+}
+
+function parseWorkEvent(content: string): WorkEventDraft {
+  const parsed = JSON.parse(normalizeJsonContent(content)) as Partial<WorkEventDraft>;
+
+  return {
+    title: String(parsed.title),
+    summary: String(parsed.summary),
+    category: String(parsed.category),
+    confidence: Number(parsed.confidence)
+  };
+}
 
 export function createMiniMaxProvider(
   profile: AIProviderProfile,
   apiKey: string,
-  fetchImpl: typeof fetch = fetch
+  fetchImpl: FetchLike = fetch
 ): AIProvider {
   const resolvedProfile: AIProviderProfile = {
     ...profile,
     type: "minimax",
-    baseUrl: profile.baseUrl || minimaxDefaultBaseUrl
+    baseUrl: minimaxDefaultBaseUrl
   };
 
-  return createOpenAICompatibleProvider(resolvedProfile, apiKey, fetchImpl);
+  const endpoint = messagesEndpoint(minimaxDefaultBaseUrl);
+
+  async function requestMessages(body: AnthropicMessageRequest): Promise<Response> {
+    return fetchImpl(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "anthropic-version": anthropicVersion,
+        "x-api-key": apiKey,
+        ...resolvedProfile.customHeaders
+      },
+      body: JSON.stringify(body)
+    });
+  }
+
+  async function post(messages: unknown[]): Promise<AnthropicMessageResponse> {
+    const response = await requestMessages({
+      model: resolvedProfile.modelName,
+      messages
+    });
+
+    if (!response.ok) {
+      throw new Error(`AI provider request failed: ${response.status}`);
+    }
+
+    return response.json() as Promise<AnthropicMessageResponse>;
+  }
+
+  return {
+    profile: resolvedProfile,
+    async analyzeScreenshot(input: ScreenshotAnalysisInput) {
+      const payload = await post([
+        {
+          role: "user",
+          content: [
+            { type: "text", text: input.prompt },
+            {
+              type: "image",
+              source: {
+                type: "base64",
+                media_type: input.mimeType,
+                data: input.imageBase64
+              }
+            }
+          ]
+        }
+      ]);
+
+      return parseWorkEvent(extractText(payload));
+    },
+    async generateDailyReport(input: DailyReportInput) {
+      const payload = await post([
+        {
+          role: "user",
+          content: `${input.prompt}\n\nUser instruction: ${input.userInstruction}\n\nEvents:\n${JSON.stringify(input.events)}`
+        }
+      ]);
+
+      return extractText(payload);
+    },
+    async checkConnection() {
+      try {
+        const response = await requestMessages({
+          model: resolvedProfile.modelName,
+          messages: [{ role: "user", content: "ping" }],
+          max_tokens: 1
+        });
+
+        if (!response.ok) {
+          return connectionStatusFromHttpStatus(response.status);
+        }
+
+        return { ok: true, message: "连接成功。" };
+      } catch {
+        return { ok: false, message: "连接失败：网络不可用或接口无法访问。" };
+      }
+    }
+  };
 }
