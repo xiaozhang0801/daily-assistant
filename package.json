@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "vue-tsc --noEmit && electron-vite build",
+    "dist:win": "npm run build && electron-builder --win nsis",
     "test": "vue-tsc --noEmit && vitest run --config vitest.config.ts",
     "test:watch": "vitest",
     "lint": "vue-tsc --noEmit"
@@ -23,10 +24,41 @@
     "@types/node": "^26.1.0",
     "@vitejs/plugin-vue": "^6.0.7",
     "electron": "^43.1.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^5.0.0",
     "typescript": "^6.0.3",
     "vite": "^7.3.6",
     "vitest": "^4.1.10",
     "vue-tsc": "^3.3.6"
+  },
+  "build": {
+    "appId": "com.daily-assistant.app",
+    "productName": "日报助手",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   }
 }
