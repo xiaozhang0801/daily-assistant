@@ -31,7 +31,7 @@
 - `日报助手 Setup <version>.exe`
 - `日报助手 Setup <version>.exe.blockmap`
 
-发布新版本时，需要先把 `package.json` 的 `version` 提升到目标版本，再执行 Windows 打包命令。打包配置需要生成 `latest.yml`，并让应用能读取 generic 更新源。
+发布新版本时，需要先把 `package.json` 的 `version` 提升到目标版本，再执行 Windows 打包命令。打包配置通过 `publish.generic` 固定更新源，让 `electron-builder` 生成 `latest.yml` 和应用内使用的 `app-update.yml`。
 
 ## 架构
 
@@ -40,8 +40,9 @@
 - 新增主进程更新服务，封装 `electron-updater`。
 - 新增 update IPC 通道：检查更新、开始下载状态推送、退出并安装。
 - preload 通过 `window.dailyAssistant.updater` 暴露窄接口。
+- `App.vue` 在启用更新入口的构建中，应用启动后触发一次自动检查。
 - 设置页调用 updater IPC，并订阅更新状态。
-- 更新源地址在主进程更新服务中集中定义为固定常量。
+- 更新源地址在 `package.json` 的 `build.publish` 中固定配置。
 - 渲染层根据环境变量决定是否渲染“应用更新”区域；未开启时用户看不到检查更新入口，主进程也不执行启动自动检查。
 
 ## 环境变量开关
@@ -56,11 +57,11 @@
 ## 数据流
 
 1. 构建时设置 `VITE_ENABLE_APP_UPDATE=true`。
-2. 应用启动并创建主窗口后，主进程自动触发一次更新检查。
+2. 应用启动并挂载渲染进程后，`App.vue` 通过 preload 调用一次自动更新检查。
 3. 用户进入设置页时可以看到“应用更新”区域和当前更新状态。
 4. 用户也可以点击“检查更新”，手动再次触发检查。
-5. 主进程使用固定更新地址调用 `autoUpdater.setFeedURL`.
-6. 主进程执行检查更新。
+5. 主进程使用打包时生成的 `app-update.yml` 更新源配置。
+6. 主进程调用 `autoUpdater.checkForUpdates` 执行检查更新。
 7. 检查结果、下载进度、下载完成或错误状态通过事件推送给渲染进程。
 8. 用户点击“立即重启安装”后，主进程调用 `quitAndInstall`.
 
@@ -83,7 +84,7 @@
 
 ## 测试策略
 
-- 单元测试：固定更新源常量、环境变量显示开关、启动自动检查守卫、更新状态文案、设置页更新区域渲染。
+- 单元测试：固定 `publish.generic` 更新源、环境变量显示开关、启动自动检查守卫、更新状态文案、设置页更新区域渲染。
 - IPC 契约测试：preload 暴露 updater API，主进程注册 updater 通道。
 - 构建验证：`npm run build`。
 - 打包验证：`npm run dist:win -- --publish never` 或等价命令，确认生成 `latest.yml`、安装包和 blockmap。
