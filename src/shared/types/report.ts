@@ -45,6 +45,7 @@ export interface DailyHistoryDay {
   duration: string;
   events: number;
   report: DailyHistoryReportStatus;
+  reportContent: string | null;
 }
 
 export interface WeeklyReportGenerationResult {

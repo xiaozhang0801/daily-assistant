@@ -237,4 +237,42 @@ describe("AI connection test", () => {
       confidence: 0.82
     });
   });
+
+  it("repairs malformed MiniMax screenshot analysis JSON", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      successfulAnthropicResponse(`\`\`\`json
+{
+  "title": "检查截图",
+  "summary": "正在排查 "日报助手" 的截图分析",
+  "category": "测试",
+  "confidence": 0.81
+}
+\`\`\``)
+    );
+    const provider = createMiniMaxProvider(
+      {
+        id: "minimax",
+        name: "MiniMax",
+        type: "minimax",
+        baseUrl: null,
+        apiKeyRef: "settings:ai.apiKey",
+        modelName: "MiniMax-M3",
+        customHeaders: {},
+        enabled: true
+      },
+      "api-key",
+      fetchMock as typeof fetch
+    );
+
+    await expect(
+      provider.analyzeScreenshot({
+        imageBase64: "iVBORw0KGgo=",
+        mimeType: "image/png",
+        prompt: "只返回 JSON"
+      })
+    ).resolves.toMatchObject({
+      title: "检查截图",
+      summary: "正在排查 \"日报助手\" 的截图分析"
+    });
+  });
 });

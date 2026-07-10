@@ -231,7 +231,7 @@ export function registerDashboardIpc(options: DashboardIpcOptions = {}): void {
       ...weekRangeFor(new Date())
     };
   });
-  ipcMain.handle(dashboardChannels.getHistory, async () =>
-    options.repositories ? buildDashboardHistory({ repositories: options.repositories }) : []
+  ipcMain.handle(dashboardChannels.getHistory, async (_event, days: number | undefined) =>
+    options.repositories ? buildDashboardHistory({ repositories: options.repositories, days }) : []
   );
 }

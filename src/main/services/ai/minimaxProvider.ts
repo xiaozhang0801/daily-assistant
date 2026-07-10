@@ -1,5 +1,6 @@
-import type { AIProviderProfile, ProviderStatus, WorkEventDraft } from "../../../shared/types";
+import type { AIProviderProfile, ProviderStatus } from "../../../shared/types";
 import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "./provider";
+import { parseWorkEventResponse } from "./workEventResponseParser";
 
 export const minimaxDefaultBaseUrl = "https://api.minimaxi.com/anthropic";
 const anthropicVersion = "2023-06-01";
@@ -44,31 +45,6 @@ function extractText(payload: AnthropicMessageResponse): string {
     .filter((item) => item.type === "text" && typeof item.text === "string")
     .map((item) => item.text)
     .join("");
-}
-
-function normalizeJsonContent(content: string): string {
-  const trimmed = content.trim();
-  const fencedJson = trimmed.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
-  const candidate = fencedJson ? fencedJson[1].trim() : trimmed;
-
-  if (candidate.startsWith("{")) {
-    return candidate;
-  }
-
-  const start = candidate.indexOf("{");
-  const end = candidate.lastIndexOf("}");
-  return start >= 0 && end > start ? candidate.slice(start, end + 1) : candidate;
-}
-
-function parseWorkEvent(content: string): WorkEventDraft {
-  const parsed = JSON.parse(normalizeJsonContent(content)) as Partial<WorkEventDraft>;
-
-  return {
-    title: String(parsed.title),
-    summary: String(parsed.summary),
-    category: String(parsed.category),
-    confidence: Number(parsed.confidence)
-  };
 }
 
 export function createMiniMaxProvider(
@@ -130,7 +106,7 @@ export function createMiniMaxProvider(
         }
       ]);
 
-      return parseWorkEvent(extractText(payload));
+      return parseWorkEventResponse(extractText(payload));
     },
     async generateDailyReport(input: DailyReportInput) {
       const payload = await post([

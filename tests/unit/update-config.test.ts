@@ -4,7 +4,7 @@ import { isAppUpdateFeatureEnabled } from "../../src/shared/types/updater";
 
 describe("update config", () => {
   it("uses the requested release version", () => {
-    expect(packageJson.version).toBe("0.1.4");
+    expect(packageJson.version).toBe("0.1.5");
   });
 
   it("uses the fixed intranet generic publish URL", () => {

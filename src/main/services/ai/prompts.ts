@@ -12,7 +12,8 @@ export const legacyDefaultDailyReportPrompt = [
 
 export const defaultScreenshotPrompt = [
   "你是个人日报助手的截图分析员，请根据桌面截图判断用户正在进行的工作活动。",
-  "只返回 JSON，不要输出额外说明；字段必须包含 title、summary、category、confidence。",
+  "只返回 JSON，且必须是严格有效的 JSON；不要输出 Markdown 代码块或额外说明，字段必须包含 title、summary、category、confidence。",
+  "字符串中的双引号、反斜杠和换行必须按 JSON 规则转义。",
   "title 要简短，summary 用中文概括工作内容，不要暴露隐私细节或逐字描述屏幕内容。"
 ].join("\n");
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createOpenAICompatibleProvider } from "../../src/main/services/ai/openaiCompatibleProvider";
 import { createProviderRegistry } from "../../src/main/services/ai/providerRegistry";
+import { invalidWorkEventResponseMessage } from "../../src/main/services/ai/workEventResponseParser";
 import {
   defaultDailyReportPrompt,
   defaultScreenshotPrompt,
@@ -64,6 +65,96 @@ describe("AI providers", () => {
     );
   });
 
+  it("repairs malformed OpenAI-compatible screenshot analysis JSON", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: `分析结果如下：
+{
+  "title": "检查日报",
+  "summary": "正在查看 "日报助手" 的报告页面",
+  "category": "测试",
+  "confidence": 0.84
+}`
+            }
+          }
+        ]
+      })
+    });
+
+    const provider = createOpenAICompatibleProvider(
+      {
+        id: "custom",
+        name: "Custom",
+        type: "openai_compatible",
+        baseUrl: "https://example.test/v1",
+        apiKeyRef: "secret",
+        modelName: "vision-model",
+        customHeaders: {},
+        enabled: true
+      },
+      "api-key",
+      fetchMock as typeof fetch
+    );
+
+    await expect(
+      provider.analyzeScreenshot({
+        imageBase64: "abc",
+        mimeType: "image/png",
+        prompt: defaultScreenshotPrompt
+      })
+    ).resolves.toMatchObject({
+      title: "检查日报",
+      summary: "正在查看 \"日报助手\" 的报告页面"
+    });
+  });
+
+  it("hides native JSON parse errors when OpenAI-compatible content is unusable", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: `{
+  "title": "",
+  "summary": "标题不可用",
+  "category": "测试",
+  "confidence": 0.84
+}`
+            }
+          }
+        ]
+      })
+    });
+
+    const provider = createOpenAICompatibleProvider(
+      {
+        id: "custom",
+        name: "Custom",
+        type: "openai_compatible",
+        baseUrl: "https://example.test/v1",
+        apiKeyRef: "secret",
+        modelName: "vision-model",
+        customHeaders: {},
+        enabled: true
+      },
+      "api-key",
+      fetchMock as typeof fetch
+    );
+
+    await expect(
+      provider.analyzeScreenshot({
+        imageBase64: "abc",
+        mimeType: "image/png",
+        prompt: defaultScreenshotPrompt
+      })
+    ).rejects.toThrow(invalidWorkEventResponseMessage);
+  });
+
   it("selects MiniMax as the default preset", () => {
     const registry = createProviderRegistry();
     expect(registry.defaultProviderType).toBe("minimax");
@@ -72,6 +163,8 @@ describe("AI providers", () => {
   it("contains editable Chinese default prompt templates", () => {
     expect(defaultScreenshotPrompt).toContain("只返回 JSON");
     expect(defaultScreenshotPrompt).toContain("截图");
+    expect(defaultScreenshotPrompt).toContain("严格有效的 JSON");
+    expect(defaultScreenshotPrompt).toContain("双引号");
     expect(defaultDailyReportPrompt).toContain("中文日报");
     expect(defaultDailyReportPrompt).toContain("Markdown");
   });

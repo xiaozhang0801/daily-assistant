@@ -1,17 +1,23 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { CalendarDays, Copy, FileDown, FileText, Save, Sparkles } from "lucide-vue-next";
+import type { DailyHistoryDay } from "../../shared/types";
 import { todayRefreshIntervalMs } from "./todayViewModel";
 import {
-  buildTodayReportView,
+  buildReportLibraryView,
+  currentNaturalWeekDayCount,
   emptyDailyReport,
+  resolveSelectedReportDate,
+  type ReportListItem,
   toDesktopBridgeUnavailableMessage,
+  toReportHistoryLoadErrorMessage,
   toMarkdownExportUnavailableMessage
 } from "./reportsViewModel";
 
-const currentReport = ref(emptyDailyReport);
+const todayReportDraft = ref(emptyDailyReport);
 const weeklyReportDraft = ref("# 本周周报\n\n- 点击「生成本周周报」后，从已保存日报库汇总。");
-const reports = ref<Array<{ id: string; date: string; status: string; count: number }>>([]);
+const reports = ref<ReportListItem[]>([]);
+const selectedReportDate = ref(todayDateKey());
 const saving = ref(false);
 const weeklyGenerating = ref(false);
 const weeklySaving = ref(false);
@@ -34,6 +40,16 @@ const weeklyMetaLabel = computed(() => {
   if (!weeklyMeta.value) return "本周";
   return `${weeklyMeta.value.startDate} 至 ${weeklyMeta.value.endDate} · ${weeklyMeta.value.weekKey}`;
 });
+
+const selectedReport = computed(
+  () => reports.value.find((report) => report.date === selectedReportDate.value) ?? null
+);
+
+const viewingToday = computed(() => selectedReportDate.value === todayDateKey());
+
+const currentReport = computed(() =>
+  viewingToday.value ? todayReportDraft.value : selectedReport.value?.content ?? emptyDailyReport
+);
 
 async function copyReport(): Promise<void> {
   saveErrorMessage.value = "";
@@ -74,16 +90,34 @@ async function loadReports(): Promise<void> {
   loading = true;
   try {
     const today = await dashboard.getToday();
-    const view = buildTodayReportView({
-      date: todayDateKey(),
+    const todayDate = todayDateKey();
+    let history: DailyHistoryDay[] = [];
+    try {
+      history = await dashboard.getHistory(currentNaturalWeekDayCount());
+    } catch (error) {
+      history = [];
+      saveErrorMessage.value = toReportHistoryLoadErrorMessage(error);
+    }
+    const view = buildReportLibraryView({
+      date: todayDate,
       reportDraft: today.reportDraft,
       reportSaved: today.reportSaved,
-      events: today.events
+      events: today.events,
+      history
     });
     if (!reportDirty.value) {
-      currentReport.value = view.currentReport;
+      todayReportDraft.value = view.currentReport;
     }
-    reports.value = view.reports;
+    reports.value = view.reports.map((report) =>
+      report.date === todayDate
+        ? {
+            ...report,
+            content: todayReportDraft.value,
+            status: reportDirty.value ? "草稿" : report.status
+          }
+        : report
+    );
+    selectedReportDate.value = resolveSelectedReportDate(selectedReportDate.value, reports.value, todayDate);
   } finally {
     loading = false;
   }
@@ -95,13 +129,17 @@ async function saveCurrentReport(): Promise<void> {
     saveErrorMessage.value = toDesktopBridgeUnavailableMessage("保存日报");
     return;
   }
+  if (!viewingToday.value) {
+    saveErrorMessage.value = "历史日报只读，不能覆盖保存。";
+    return;
+  }
 
   saving.value = true;
   saveStatusMessage.value = "";
   saveErrorMessage.value = "";
   try {
-    const result = await dashboard.saveReport(currentReport.value);
-    currentReport.value = result.content;
+    const result = await dashboard.saveReport(todayReportDraft.value);
+    todayReportDraft.value = result.content;
     reportDirty.value = false;
     saveStatusMessage.value = `已保存 ${clockLabel()}`;
     await loadReports();
@@ -170,13 +208,33 @@ async function saveCurrentWeeklyReport(): Promise<void> {
 }
 
 function updateCurrentReport(event: Event): void {
-  currentReport.value = (event.target as HTMLTextAreaElement).value;
+  if (!viewingToday.value) return;
+
+  todayReportDraft.value = (event.target as HTMLTextAreaElement).value;
   reportDirty.value = true;
   saveErrorMessage.value = "";
   if (saveStatusMessage.value.startsWith("已保存")) {
     saveStatusMessage.value = "未保存修改";
   }
-  reports.value = reports.value.map((report, index) => (index === 0 ? { ...report, status: "草稿" } : report));
+  reports.value = reports.value.map((report) =>
+    report.date === todayDateKey()
+      ? {
+          ...report,
+          content: todayReportDraft.value,
+          status: "草稿"
+        }
+      : report
+  );
+}
+
+function selectReport(report: ReportListItem): void {
+  selectedReportDate.value = report.date;
+  saveErrorMessage.value = "";
+  saveStatusMessage.value = report.readOnly
+    ? "历史日报只读，可复制查看。"
+    : reportDirty.value
+      ? "未保存修改"
+      : "";
 }
 
 function updateWeeklyReport(event: Event): void {
@@ -230,7 +288,12 @@ onBeforeUnmount(() => {
           <Copy :size="16" :stroke-width="1.9" />
           <span>复制</span>
         </button>
-        <button type="button" title="保存当前日报" :disabled="saving || !currentReport.trim()" @click="saveCurrentReport">
+        <button
+          type="button"
+          :title="viewingToday ? '保存当前日报' : '历史日报只读'"
+          :disabled="saving || !viewingToday || !todayReportDraft.trim()"
+          @click="saveCurrentReport"
+        >
           <Save :size="16" :stroke-width="1.9" />
           <span>{{ saving ? "保存中" : "保存" }}</span>
         </button>
@@ -243,13 +306,21 @@ onBeforeUnmount(() => {
 
     <div class="report-layout">
       <aside class="report-list" aria-label="日报列表">
-        <article v-for="report in reports" :key="report.id" class="report-row">
+        <button
+          v-for="report in reports"
+          :key="report.id"
+          type="button"
+          class="report-row daily-row"
+          :class="{ active: report.date === selectedReportDate }"
+          :aria-pressed="report.date === selectedReportDate"
+          @click="selectReport(report)"
+        >
           <FileText :size="17" :stroke-width="1.9" />
           <div>
             <strong>{{ report.date }}</strong>
             <span>{{ report.status }}，{{ report.count }} 条事件</span>
           </div>
-        </article>
+        </button>
         <article class="report-row weekly-row">
           <CalendarDays :size="17" :stroke-width="1.9" />
           <div>
@@ -261,7 +332,13 @@ onBeforeUnmount(() => {
 
       <div class="editor-stack">
         <section class="editor-panel">
-          <textarea :value="currentReport" spellcheck="false" aria-label="日报内容" @input="updateCurrentReport"></textarea>
+          <textarea
+            :value="currentReport"
+            :readonly="!viewingToday"
+            spellcheck="false"
+            :aria-label="viewingToday ? '今日日报内容' : '历史日报内容'"
+            @input="updateCurrentReport"
+          ></textarea>
         </section>
 
         <section class="weekly-panel" aria-label="周报总结">
@@ -430,7 +507,16 @@ onBeforeUnmount(() => {
     transform 240ms var(--motion);
 }
 
-.report-row:first-child {
+.daily-row {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.report-row.active {
   background: var(--accent-soft);
   color: var(--accent-strong);
 }
@@ -490,6 +576,15 @@ onBeforeUnmount(() => {
 
 .editor-panel textarea {
   min-height: 360px;
+}
+
+.editor-panel textarea:read-only {
+  background:
+    linear-gradient(180deg, rgba(239, 242, 246, 0.88), rgba(249, 250, 252, 0) 130px),
+    repeating-linear-gradient(0deg, transparent 0, transparent 31px, rgba(82, 98, 122, 0.035) 32px),
+    #f8fafb;
+  color: var(--ink-soft);
+  cursor: default;
 }
 
 .weekly-panel {

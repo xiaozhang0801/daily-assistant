@@ -1,5 +1,6 @@
-import type { AIProviderProfile, ProviderStatus, WorkEventDraft } from "../../../shared/types";
+import type { AIProviderProfile, ProviderStatus } from "../../../shared/types";
 import type { AIProvider, DailyReportInput, ScreenshotAnalysisInput } from "./provider";
+import { parseWorkEventResponse } from "./workEventResponseParser";
 
 type FetchLike = typeof fetch;
 
@@ -16,17 +17,6 @@ interface ChatCompletionRequest {
   messages: unknown[];
   max_tokens?: number;
   stream?: boolean;
-}
-
-function parseWorkEvent(content: string): WorkEventDraft {
-  const parsed = JSON.parse(content) as Partial<WorkEventDraft>;
-
-  return {
-    title: String(parsed.title),
-    summary: String(parsed.summary),
-    category: String(parsed.category),
-    confidence: Number(parsed.confidence)
-  };
 }
 
 function chatEndpoint(baseUrl: string): string {
@@ -103,7 +93,7 @@ export function createOpenAICompatibleProvider(
         }
       ]);
 
-      return parseWorkEvent(payload.choices[0].message.content);
+      return parseWorkEventResponse(payload.choices[0].message.content);
     },
     async generateDailyReport(input: DailyReportInput) {
       const payload = await post([

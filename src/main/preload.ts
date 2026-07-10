@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld("dailyAssistant", {
     saveReport: (content: string) => ipcRenderer.invoke(dashboardChannels.saveReport, content),
     generateWeeklyReport: () => ipcRenderer.invoke(dashboardChannels.generateWeeklyReport),
     saveWeeklyReport: (content: string) => ipcRenderer.invoke(dashboardChannels.saveWeeklyReport, content),
-    getHistory: () => ipcRenderer.invoke(dashboardChannels.getHistory)
+    getHistory: (days?: number) => ipcRenderer.invoke(dashboardChannels.getHistory, days)
   },
   settings: {
     get: () => ipcRenderer.invoke(settingsChannels.get),

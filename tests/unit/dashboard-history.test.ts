@@ -87,7 +87,10 @@ function createRepositoryStub(): AppRepositories {
     },
     reports: {
       save: vi.fn(),
-      getByDate: vi.fn((date: string) => reportsByDate.get(date) ?? null)
+      getByDate: vi.fn((date: string) => reportsByDate.get(date) ?? null),
+      getByDateAndType: vi.fn((date: string, type: string) =>
+        type === "daily" ? reportsByDate.get(date) ?? null : null
+      )
     },
     aiProviders: {
       save: vi.fn(),
@@ -105,9 +108,21 @@ function createRepositoryStub(): AppRepositories {
 }
 
 describe("dashboard history", () => {
-  it("builds recent history from real captures, work events, and saved reports", () => {
+  it("keeps the default history range at the latest seven days", () => {
     const history = buildDashboardHistory({
       repositories: createRepositoryStub(),
+      now: () => new Date("2026-07-08T12:00:00.000Z")
+    });
+
+    expect(history).toHaveLength(7);
+    expect(history[0].date).toBe("2026-07-08");
+    expect(history[6].date).toBe("2026-07-02");
+  });
+
+  it("builds a requested current-week range with saved daily report content", () => {
+    const repositories = createRepositoryStub();
+    const history = buildDashboardHistory({
+      repositories,
       now: () => new Date("2026-07-08T12:00:00.000Z"),
       days: 3
     });
@@ -117,20 +132,26 @@ describe("dashboard history", () => {
         date: "2026-07-08",
         duration: "10m",
         events: 1,
-        report: "已生成"
+        report: "已生成",
+        reportContent: "# 今日日报"
       },
       {
         date: "2026-07-07",
         duration: "35m",
         events: 1,
-        report: "草稿"
+        report: "草稿",
+        reportContent: null
       },
       {
         date: "2026-07-06",
         duration: "0m",
         events: 0,
-        report: "未生成"
+        report: "未生成",
+        reportContent: null
       }
     ]);
+    expect(repositories.reports.getByDateAndType).toHaveBeenCalledTimes(3);
+    expect(repositories.reports.getByDateAndType).toHaveBeenCalledWith("2026-07-08", "daily");
+    expect(repositories.reports.getByDate).not.toHaveBeenCalled();
   });
 });

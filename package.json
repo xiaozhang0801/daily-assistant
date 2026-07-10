@@ -1,6 +1,6 @@
 {
   "name": "daily-assistant",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Personal desktop daily report assistant.",
   "private": true,
   "type": "module",
@@ -16,6 +16,7 @@
   "dependencies": {
     "better-sqlite3": "^12.11.1",
     "electron-updater": "^6.8.9",
+    "jsonrepair": "^3.15.0",
     "lucide-vue-next": "^1.0.0",
     "vue": "^3.5.39"
   },

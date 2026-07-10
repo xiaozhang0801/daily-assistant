@@ -19,15 +19,15 @@ function recentDateKey(today: Date, offsetDays: number): string {
 
 export function buildDashboardHistory(options: DashboardHistoryOptions): DailyHistoryDay[] {
   const now = options.now ?? (() => new Date());
-  const days = Math.max(1, options.days ?? 7);
   const today = now();
+  const days = Math.max(1, options.days ?? 7);
 
   return Array.from({ length: days }, (_, index) => {
     const date = recentDateKey(today, index);
     const sessions = options.repositories.recordingSessions.listByDate(date);
     const captures = options.repositories.captures.listByDate(date);
     const events = options.repositories.workEvents.listByDate(date);
-    const report = options.repositories.reports.getByDate(date);
+    const report = options.repositories.reports.getByDateAndType(date, "daily");
     const durationMinutes =
       sessions.length > 0 ? calculateRecordingDurationMinutes(sessions, date, today) : captures.length;
 
@@ -35,7 +35,8 @@ export function buildDashboardHistory(options: DashboardHistoryOptions): DailyHi
       date,
       duration: `${durationMinutes}m`,
       events: events.length,
-      report: report ? "已生成" : durationMinutes > 0 || captures.length > 0 || events.length > 0 ? "草稿" : "未生成"
+      report: report ? "已生成" : durationMinutes > 0 || captures.length > 0 || events.length > 0 ? "草稿" : "未生成",
+      reportContent: report?.content ?? null
     };
   });
 }
