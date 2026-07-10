@@ -1,6 +1,7 @@
 import type { DailyReportGenerationResult, WorkEvent } from "../../shared/types";
 
 export const todayRefreshIntervalMs = 2_000;
+export const todayTransientMessageDurationMs = 10_000;
 
 export function sortEventsNewestFirst(events: WorkEvent[]): WorkEvent[] {
   return [...events].sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime());

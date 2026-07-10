@@ -3,6 +3,7 @@ import type { WorkEvent } from "../../src/shared/types";
 import {
   sortEventsNewestFirst,
   summarizeEventCategories,
+  todayTransientMessageDurationMs,
   toCaptureAnalysisWarningMessage,
   toReportGenerationStatusMessage,
   toResumeCaptureStatusMessage
@@ -23,6 +24,10 @@ function event(id: string, startedAt: string): WorkEvent {
 }
 
 describe("today view model", () => {
+  it("keeps transient today page messages visible for ten seconds", () => {
+    expect(todayTransientMessageDurationMs).toBe(10_000);
+  });
+
   it("sorts timeline events from newest to oldest without mutating source data", () => {
     const oldest = event("oldest", "2026-07-08T08:00:00.000Z");
     const newest = event("newest", "2026-07-08T10:00:00.000Z");

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { Activity, AlertCircle, Database, FileText, TimerReset } from "lucide-vue-next";
 import type { ReportGenerationMode, WorkEvent } from "../../shared/types";
 import PrivacyPanel from "../components/PrivacyPanel.vue";
@@ -9,6 +9,7 @@ import TimelineList from "../components/TimelineList.vue";
 import { defaultReportGenerationMode } from "./reportModeViewModel";
 import {
   todayRefreshIntervalMs,
+  todayTransientMessageDurationMs,
   toCaptureAnalysisWarningMessage,
   toReportGenerationStatusMessage,
   toResumeCaptureStatusMessage
@@ -47,7 +48,9 @@ const reportErrorMessage = ref("");
 const reportStatusTone = ref<"success" | "warning">("success");
 const operationMessage = ref("");
 const operationTone = ref<"info" | "warning" | "error">("info");
+const visibleCaptureAnalysisWarning = ref("");
 let refreshTimer: number | undefined;
+let messageDismissTimer: number | undefined;
 let loadingToday = false;
 
 const latestActivity = computed(() => {
@@ -90,6 +93,28 @@ function clockLabel(): string {
   });
 }
 
+function clearMessageDismissTimer(): void {
+  if (messageDismissTimer) {
+    window.clearTimeout(messageDismissTimer);
+    messageDismissTimer = undefined;
+  }
+}
+
+function clearTodayMessages(): void {
+  operationMessage.value = "";
+  reportStatusMessage.value = "";
+  reportErrorMessage.value = "";
+  visibleCaptureAnalysisWarning.value = "";
+  messageDismissTimer = undefined;
+}
+
+function scheduleTodayMessageDismiss(): void {
+  clearMessageDismissTimer();
+  messageDismissTimer = window.setTimeout(() => {
+    clearTodayMessages();
+  }, todayTransientMessageDurationMs);
+}
+
 async function loadToday(preserveReportDraft = false): Promise<void> {
   const dashboard = window.dailyAssistant?.dashboard;
   if (!dashboard) return;
@@ -121,6 +146,7 @@ async function pauseCapture(): Promise<void> {
   if (!dashboard) {
     operationTone.value = "error";
     operationMessage.value = "没有连接到 Electron 主进程，无法暂停记录。";
+    scheduleTodayMessageDismiss();
     return;
   }
 
@@ -129,9 +155,11 @@ async function pauseCapture(): Promise<void> {
     await loadToday();
     operationTone.value = "info";
     operationMessage.value = "已暂停记录。";
+    scheduleTodayMessageDismiss();
   } catch (error) {
     operationTone.value = "error";
     operationMessage.value = error instanceof Error ? error.message : "暂停记录失败";
+    scheduleTodayMessageDismiss();
   }
 }
 
@@ -140,6 +168,7 @@ async function resumeCapture(): Promise<void> {
   if (!dashboard) {
     operationTone.value = "error";
     operationMessage.value = "没有连接到 Electron 主进程，无法继续记录。";
+    scheduleTodayMessageDismiss();
     return;
   }
 
@@ -148,9 +177,11 @@ async function resumeCapture(): Promise<void> {
     await loadToday();
     operationTone.value = state.value.providerStatus === "ready" ? "info" : "warning";
     operationMessage.value = toResumeCaptureStatusMessage(state.value.providerStatus);
+    scheduleTodayMessageDismiss();
   } catch (error) {
     operationTone.value = "error";
     operationMessage.value = error instanceof Error ? error.message : "继续记录失败";
+    scheduleTodayMessageDismiss();
   }
 }
 
@@ -158,6 +189,7 @@ async function generateReport(): Promise<void> {
   const dashboard = window.dailyAssistant?.dashboard;
   if (!dashboard) {
     reportErrorMessage.value = "没有连接到 Electron 主进程，无法生成日报。";
+    scheduleTodayMessageDismiss();
     return;
   }
 
@@ -170,9 +202,11 @@ async function generateReport(): Promise<void> {
     reportDirty.value = true;
     reportStatusTone.value = result.source === "ai" && !result.notice ? "success" : "warning";
     reportStatusMessage.value = `${toReportGenerationStatusMessage(result)}（${clockLabel()}，未保存）`;
+    scheduleTodayMessageDismiss();
     await loadToday(true);
   } catch (error) {
     reportErrorMessage.value = error instanceof Error ? error.message : "生成日报失败";
+    scheduleTodayMessageDismiss();
   } finally {
     generating.value = false;
   }
@@ -191,9 +225,11 @@ async function saveReport(): Promise<void> {
     reportDirty.value = false;
     reportStatusTone.value = "success";
     reportStatusMessage.value = `已保存 ${clockLabel()}`;
+    scheduleTodayMessageDismiss();
     await loadToday(true);
   } catch (error) {
     reportErrorMessage.value = error instanceof Error ? error.message : "保存日报失败";
+    scheduleTodayMessageDismiss();
   } finally {
     saving.value = false;
   }
@@ -205,6 +241,7 @@ function updateReportDraft(value: string): void {
   reportErrorMessage.value = "";
   if (reportStatusMessage.value.startsWith("已保存")) {
     reportStatusMessage.value = "未保存修改";
+    scheduleTodayMessageDismiss();
   }
 }
 
@@ -214,12 +251,14 @@ async function copyReport(): Promise<void> {
     copyState.value = "已复制";
     operationTone.value = "info";
     operationMessage.value = "日报内容已复制到剪贴板。";
+    scheduleTodayMessageDismiss();
     window.setTimeout(() => {
       copyState.value = "复制";
     }, 1200);
   } catch (error) {
     operationTone.value = "error";
     operationMessage.value = error instanceof Error ? error.message : "复制日报失败";
+    scheduleTodayMessageDismiss();
   }
 }
 
@@ -228,6 +267,13 @@ function refreshWhenVisible(): void {
     void loadToday();
   }
 }
+
+watch(captureAnalysisWarning, (message) => {
+  visibleCaptureAnalysisWarning.value = message;
+  if (message) {
+    scheduleTodayMessageDismiss();
+  }
+});
 
 onMounted(() => {
   void loadToday();
@@ -242,6 +288,7 @@ onBeforeUnmount(() => {
   if (refreshTimer) {
     window.clearInterval(refreshTimer);
   }
+  clearMessageDismissTimer();
   window.removeEventListener("focus", refreshWhenVisible);
   document.removeEventListener("visibilitychange", refreshWhenVisible);
 });
@@ -263,9 +310,9 @@ onBeforeUnmount(() => {
       <span>{{ operationMessage }}</span>
     </div>
 
-    <div v-if="captureAnalysisWarning" class="operation-banner warning">
+    <div v-if="visibleCaptureAnalysisWarning" class="operation-banner warning">
       <AlertCircle :size="16" :stroke-width="1.9" />
-      <span>{{ captureAnalysisWarning }}</span>
+      <span>{{ visibleCaptureAnalysisWarning }}</span>
     </div>
 
     <div class="today-content">
