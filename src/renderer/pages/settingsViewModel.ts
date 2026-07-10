@@ -9,7 +9,6 @@ export interface AIProviderSettingsInput {
   customHeadersText?: string;
   screenshotPrompt?: string;
   dailyReportPrompt?: string;
-  uploadToAIEnabled?: boolean;
   captureIntervalMinutes?: number;
   gitSearchRoot?: string;
 }
@@ -23,7 +22,6 @@ export interface NormalizedAIProviderSettings {
   customHeadersText: string;
   screenshotPrompt: string;
   dailyReportPrompt: string;
-  uploadToAIEnabled: boolean;
   captureIntervalMinutes: number;
   gitSearchRoot: string;
 }
@@ -93,7 +91,6 @@ export function normalizeAIProviderSettings(input: AIProviderSettingsInput): {
       customHeadersText,
       screenshotPrompt,
       dailyReportPrompt,
-      uploadToAIEnabled: true,
       captureIntervalMinutes,
       gitSearchRoot
     },

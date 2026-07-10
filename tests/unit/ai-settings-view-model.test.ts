@@ -55,15 +55,16 @@ describe("AI settings view model", () => {
     expect(result.value.gitSearchRoot).toBe("C:/project");
   });
 
-  it("keeps screenshot upload enabled because it is no longer user-adjustable", () => {
-    const result = normalizeAIProviderSettings({
+  it("does not include the removed screenshot upload flag in normalized settings", () => {
+    const legacyInput = {
       providerType: "minimax",
       baseUrl: "",
       apiKey: "key",
       modelName: "model",
       uploadToAIEnabled: false
-    });
+    } as const;
+    const result = normalizeAIProviderSettings(legacyInput);
 
-    expect(result.value.uploadToAIEnabled).toBe(true);
+    expect(result.value).not.toHaveProperty("uploadToAIEnabled");
   });
 });

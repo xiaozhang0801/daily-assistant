@@ -8,7 +8,6 @@ const props = defineProps<{
 
 const providerText = computed(() => {
   if (props.providerStatus === "not_configured") return "AI 未配置";
-  if (props.providerStatus === "upload_disabled") return "AI 上传关闭";
   return "AI 可用";
 });
 </script>
@@ -39,7 +38,7 @@ const providerText = computed(() => {
         <Bot :size="18" :stroke-width="1.9" />
         <div>
           <strong>{{ providerText }}</strong>
-          <span>上传分析需在设置中开启。</span>
+          <span>AI 配置完整后会自动分析截图。</span>
         </div>
       </div>
       <div class="privacy-item">

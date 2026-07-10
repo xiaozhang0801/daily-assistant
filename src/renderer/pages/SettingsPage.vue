@@ -14,7 +14,6 @@ interface SettingsState {
   customHeadersText: string;
   screenshotPrompt: string;
   dailyReportPrompt: string;
-  uploadToAIEnabled: boolean;
   captureIntervalMinutes: number;
   gitSearchRoot: string;
 }
@@ -27,7 +26,6 @@ const settings = ref<SettingsState>({
   customHeadersText: "",
   screenshotPrompt: defaultScreenshotPrompt,
   dailyReportPrompt: defaultDailyReportPrompt,
-  uploadToAIEnabled: true,
   captureIntervalMinutes: 5,
   gitSearchRoot: ""
 });

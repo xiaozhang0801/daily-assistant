@@ -80,9 +80,9 @@ describe("today view model", () => {
     );
   });
 
-  it("explains that resumed capture will not analyze screenshots until upload is enabled", () => {
-    expect(toResumeCaptureStatusMessage("upload_disabled")).toBe(
-      "已继续记录，但截图 AI 上传未开启，截图只会保存在本地。请到设置开启后再自动分析。"
+  it("treats non-ready provider status as incomplete AI configuration", () => {
+    expect(toResumeCaptureStatusMessage("unexpected_status")).toBe(
+      "已继续记录，但 AI 设置还没有保存完整，截图不会自动分析。请到设置保存 API Key 和模型后再使用 AI 分析。"
     );
   });
 

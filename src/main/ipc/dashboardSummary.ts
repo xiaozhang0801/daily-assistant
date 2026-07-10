@@ -18,10 +18,9 @@ function resolveProviderStatus(repositories: AppRepositories): string {
   const enabledProvider = repositories.aiProviders.listEnabled()[0];
   const apiKey = repositories.settings.get("ai.apiKey");
   const modelName = repositories.settings.get("ai.modelName") || enabledProvider?.modelName;
-  const uploadToAIEnabled = repositories.settings.get("capture.uploadToAIEnabled") === "true";
 
   if (!enabledProvider || !apiKey || !modelName) return "not_configured";
-  return uploadToAIEnabled ? "ready" : "upload_disabled";
+  return "ready";
 }
 
 function captureIntervalMs(repositories: AppRepositories): number {

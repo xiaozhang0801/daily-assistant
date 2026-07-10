@@ -135,7 +135,7 @@ describe("dashboard summary provider", () => {
     expect(summary.getToday(state.getToday()).reportSaved).toBe(true);
   });
 
-  it("reports upload-disabled status when AI is configured but screenshot upload is off", () => {
+  it("reports ready status without reading the legacy screenshot upload flag", () => {
     const repositories = createRepositoryStub();
     vi.mocked(repositories.settings.get).mockImplementation((key: string) => {
       if (key === "capture.uploadToAIEnabled") return "false";
@@ -152,7 +152,8 @@ describe("dashboard summary provider", () => {
       now: () => new Date("2026-07-08T10:00:00.000Z")
     });
 
-    expect(summary.getToday(state.getToday()).providerStatus).toBe("upload_disabled");
+    expect(summary.getToday(state.getToday()).providerStatus).toBe("ready");
+    expect(repositories.settings.get).not.toHaveBeenCalledWith("capture.uploadToAIEnabled");
   });
 
   it("normalizes legacy point-in-time work events into capture interval ranges", () => {

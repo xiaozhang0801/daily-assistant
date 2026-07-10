@@ -30,10 +30,6 @@ export function toResumeCaptureStatusMessage(providerStatus: string): string {
     return "已继续记录，新的截图会按设置间隔采集。";
   }
 
-  if (providerStatus === "upload_disabled") {
-    return "已继续记录，但截图 AI 上传未开启，截图只会保存在本地。请到设置开启后再自动分析。";
-  }
-
   return "已继续记录，但 AI 设置还没有保存完整，截图不会自动分析。请到设置保存 API Key 和模型后再使用 AI 分析。";
 }
 

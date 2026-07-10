@@ -68,10 +68,6 @@ function createScreenshotAnalyzer(repositories: AppRepositories) {
   const registry = createProviderRegistry();
 
   return async (record: CaptureRecord): Promise<CaptureAnalysisResult> => {
-    if (repositories.settings.get("capture.uploadToAIEnabled") !== "true") {
-      return skipCaptureAnalysis("截图 AI 上传未开启，请在设置中开启后再继续记录。");
-    }
-
     const profile = repositories.aiProviders.listEnabled()[0];
     const apiKey = repositories.settings.get("ai.apiKey");
     if (!profile) return skipCaptureAnalysis("AI 提供方未保存");

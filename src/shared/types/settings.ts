@@ -7,6 +7,5 @@ export interface CaptureSettings {
   intervalMinutes: number;
   storageDirectory: string;
   retentionDays: number;
-  uploadToAIEnabled: boolean;
   blacklist: string[];
 }

@@ -15,6 +15,21 @@ const captureRecord: CaptureRecord = {
 };
 
 const captureScreenshot = vi.fn(async () => captureRecord);
+const analysisMocks = vi.hoisted(() => ({
+  analyzeScreenshot: vi.fn(async () => ({
+    title: "继续分析截图",
+    summary: "旧上传开关关闭时仍继续进行 AI 分析。",
+    category: "开发",
+    confidence: 0.82
+  })),
+  readFile: vi.fn(async () => Buffer.from("png-bytes")),
+  unlink: vi.fn(async () => undefined)
+}));
+
+vi.mock("node:fs/promises", () => ({
+  readFile: analysisMocks.readFile,
+  unlink: analysisMocks.unlink
+}));
 
 vi.mock("electron", () => ({
   ipcMain: {
@@ -41,6 +56,14 @@ vi.mock("../../src/main/services/capture/captureScheduler", () => ({
     resume: vi.fn(),
     stop: vi.fn(),
     getState: vi.fn(() => ({ running: true, paused: false }))
+  }))
+}));
+
+vi.mock("../../src/main/services/ai/providerRegistry", () => ({
+  createProviderRegistry: vi.fn(() => ({
+    create: vi.fn(() => ({
+      analyzeScreenshot: analysisMocks.analyzeScreenshot
+    }))
   }))
 }));
 
@@ -117,14 +140,37 @@ describe("dashboard IPC capture analysis feedback", () => {
   beforeEach(() => {
     handlers.clear();
     captureScreenshot.mockClear();
+    analysisMocks.analyzeScreenshot.mockClear();
+    analysisMocks.readFile.mockClear();
+    analysisMocks.unlink.mockClear();
+  });
+
+  it("analyzes screenshots even when the legacy upload setting is false", async () => {
+    const repositories = createRepositoryStub({ uploadToAIEnabled: false, providers: [provider()] });
+
+    await resumeDefaultController(repositories);
+
+    expect(analysisMocks.analyzeScreenshot).toHaveBeenCalledWith(
+      expect.objectContaining({
+        imageBase64: Buffer.from("png-bytes").toString("base64"),
+        mimeType: "image/png"
+      })
+    );
+    expect(repositories.workEvents.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        captureId: captureRecord.id,
+        title: "继续分析截图",
+        summary: "旧上传开关关闭时仍继续进行 AI 分析。",
+        category: "开发",
+        confidence: 0.82,
+        source: "ai"
+      })
+    );
+    expect(repositories.captures.save).toHaveBeenCalledTimes(1);
+    expect(analysisMocks.unlink).toHaveBeenCalledWith(captureRecord.imagePath);
   });
 
   it.each([
-    {
-      name: "screenshot upload is disabled",
-      repositories: createRepositoryStub({ uploadToAIEnabled: false, providers: [provider()] }),
-      reason: "截图 AI 上传未开启，请在设置中开启后再继续记录。"
-    },
     {
       name: "AI provider is missing",
       repositories: createRepositoryStub({ providers: [] }),

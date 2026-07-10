@@ -106,7 +106,6 @@ describe("shared domain types", () => {
       intervalMinutes: 5,
       storageDirectory: "captures",
       retentionDays: 14,
-      uploadToAIEnabled: false,
       blacklist: ["Password Manager"]
     } satisfies CaptureSettings;
 
@@ -119,6 +118,6 @@ describe("shared domain types", () => {
     expect(providerStatus.ok).toBe(true);
     expect(draft.confidence).toBeGreaterThan(0);
     expect(setting.key).toBe("capture.intervalMinutes");
-    expect(captureSettings.uploadToAIEnabled).toBe(false);
+    expect(captureSettings.retentionDays).toBe(14);
   });
 });

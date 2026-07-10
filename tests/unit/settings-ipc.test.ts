@@ -74,7 +74,6 @@ describe("settings IPC", () => {
         customHeadersText: "",
         screenshotPrompt: "截图提示词",
         dailyReportPrompt: "日报提示词",
-        uploadToAIEnabled: true,
         captureIntervalMinutes: 5,
         gitSearchRoot: ""
       }
@@ -87,7 +86,7 @@ describe("settings IPC", () => {
     expect(repositories.promptTemplates.save).not.toHaveBeenCalled();
   });
 
-  it("forces screenshot upload to AI on when saving settings", async () => {
+  it("does not persist the removed screenshot upload flag when saving settings", async () => {
     const repositories = createRepositoryStub();
     const { registerSettingsIpc } = await import("../../src/main/ipc/settingsIpc");
     registerSettingsIpc(repositories);
@@ -107,20 +106,16 @@ describe("settings IPC", () => {
         customHeadersText: "",
         screenshotPrompt: "截图提示词",
         dailyReportPrompt: "日报提示词",
-        uploadToAIEnabled: false,
         captureIntervalMinutes: 5,
         gitSearchRoot: ""
       }
     );
 
-    expect(result).toMatchObject({
-      ok: true,
-      settings: expect.objectContaining({ uploadToAIEnabled: true })
-    });
-    expect(repositories.settings.set).toHaveBeenCalledWith("capture.uploadToAIEnabled", "true");
+    expect(result).toMatchObject({ ok: true });
+    expect(repositories.settings.set).not.toHaveBeenCalledWith("capture.uploadToAIEnabled", expect.any(String));
   });
 
-  it("repairs old disabled screenshot upload settings when reading settings", async () => {
+  it("ignores old disabled screenshot upload settings when reading settings", async () => {
     const repositories = createRepositoryStub({ "capture.uploadToAIEnabled": "false" });
     const { registerSettingsIpc } = await import("../../src/main/ipc/settingsIpc");
     registerSettingsIpc(repositories);
@@ -130,7 +125,8 @@ describe("settings IPC", () => {
 
     const result = await handler({});
 
-    expect(result).toMatchObject({ uploadToAIEnabled: true });
-    expect(repositories.settings.set).toHaveBeenCalledWith("capture.uploadToAIEnabled", "true");
+    expect(result).not.toHaveProperty("uploadToAIEnabled");
+    expect(repositories.settings.get).not.toHaveBeenCalledWith("capture.uploadToAIEnabled");
+    expect(repositories.settings.set).not.toHaveBeenCalledWith("capture.uploadToAIEnabled", expect.any(String));
   });
 });
