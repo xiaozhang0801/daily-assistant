@@ -39,12 +39,11 @@
     "directories": {
       "output": "release"
     },
-    "publish": [
-      {
-        "provider": "generic",
-        "url": "http://192.168.19.220/daily-assistant/releases/"
-      }
-    ],
+    "publish": {
+      "provider": "github",
+      "owner": "xiaozhang0801",
+      "repo": "daily-assistant"
+    },
     "files": [
       "out/**/*",
       "package.json"

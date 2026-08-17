@@ -24,13 +24,7 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Package
-        run: npx electron-builder --win nsis --publish never
-
-      - name: Upload to GitHub Releases
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release/*.exe
-          generate_release_notes: true
+      - name: Package and Release
+        run: npx electron-builder --win nsis --publish always
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
