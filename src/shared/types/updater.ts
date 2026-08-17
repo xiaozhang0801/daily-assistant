@@ -21,5 +21,5 @@ export interface CheckForUpdatesRequest {
 }
 
 export function isAppUpdateFeatureEnabled(value: unknown): boolean {
-  return value === "true";
+  return value !== "false";
 }
